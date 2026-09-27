@@ -1,0 +1,35 @@
+RESCUE QUADRUPED — FDM PRINT V3
+==========================================================
+
+MODEL
+Nominal robot height: 800.0 mm
+Thigh length: 180.0 mm
+Shin length: 200.0 mm
+
+SERVO PROTOTYPE ENVELOPE
+Width: 20.0 mm
+Length: 40.0 mm
+Height: 40.0 mm
+
+FDM FIT
+Wall thickness: 5.0 mm
+General clearance: 0.35 mm
+M3 through hole: 3.4 mm
+M3 insert pocket: 4.3 mm
+Pivot hole: 4.2 mm
+
+PRINT FILES — USE THESE FOR SLICER
+1. RescueQuadruped_Hip_Bracket_PRINT.stl
+2. RescueQuadruped_Thigh_Link_PRINT.stl
+3. RescueQuadruped_Knee_Shin_PRINT.stl
+
+MASTER CAD FILES — DO NOT USE AS SLICER INPUT
+STEP files are provided for CAD editing/assembly.
+
+SUGGESTED FIRST PROTOTYPE
+- Layer height: 0.20 mm
+- Walls: 4 or more
+- Infill: 30-50%
+- Material: PETG or another mechanically suitable FDM material
+- Print one test part before printing all 4 legs.
+- Re-measure servo and hardware before final production.
