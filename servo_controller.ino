@@ -11,6 +11,7 @@
 #include "HardwareStatus.h"
 #include "RobotCore.h"
 #include "RobotWebServer.h"
+#include "Perception.h"
 
 MotionController motionController;
 PCA9685ServoDriver pca9685;
@@ -25,6 +26,7 @@ RobotWebServer webServer(robotCore, motionController, motionSafety);
 String serialBuffer;
 bool safetyStopLatched = false;
 CompetitionInputs competitionInputs;
+WorldState perceptionInput;
 unsigned long lastTelemetryMs = 0;
 unsigned long lastMotionMs = 0;
 
@@ -238,6 +240,9 @@ void printHelp()
     Serial.println("COMPETITION");
     Serial.println("  comp_autonomous | comp_driver | comp_endgame | comp_finish | comp_status");
     Serial.println("  sensor <name> <0|1>  (simulator/test input)");
+    Serial.println("  color <RED|GREEN|BLUE|YELLOW|BLACK|WHITE|UNKNOWN> <confidence>");
+    Serial.println("  line <LEFT|CENTER|RIGHT|INTERSECTION|LOST>");
+    Serial.println("  perception_status");
     Serial.println();
     Serial.println("MISSION");
     Serial.println("  mission <IDLE|PATROL|SEARCH|RESCUE|RETURN_HOME>");
@@ -278,7 +283,7 @@ void processCommand(String command)
 
     Serial.printf("[CMD] %s\n", command.c_str());
 
-    if (command == "comp_autonomous") {
+    if (command == "perception_color ") {
         robotCore.startAutonomous();
         Serial.println("[COMP] AUTONOMOUS started");
         return;
@@ -299,6 +304,30 @@ void processCommand(String command)
     if (command == "comp_finish") {
         robotCore.finishCompetition();
         Serial.println("[COMP] FINISHED");
+        return;
+    }
+
+    if (command.startsWith("color ")) {
+        char color[16];
+        float confidence = 1.0f;
+        if (sscanf(command.c_str(), "color %15s %f", color, &confidence) >= 1) {
+            perceptionInput.targetColor.color = Perception::parseColor(String(color));
+            perceptionInput.targetColor.confidence = confidence;
+            perceptionInput.targetColor.valid = true;
+            robotCore.setPerceptionInput(perceptionInput);
+            Serial.printf("[PERCEPTION] color=%s confidence=%.2f\\n",
+                          Perception::colorName(perceptionInput.targetColor.color),
+                          confidence);
+        }
+        return;
+    }
+
+    if (command.startsWith("line ")) {
+        String value = command.substring(5);
+        value.trim();
+        perceptionInput.line = Perception::parseLine(value);
+        robotCore.setPerceptionInput(perceptionInput);
+        Serial.printf("[PERCEPTION] line=%s\\n", Perception::lineName(perceptionInput.line));
         return;
     }
 
@@ -328,6 +357,15 @@ void processCommand(String command)
 
     if (command == "comp_status") {
         Serial.printf("[COMP] phase=%s goal=%s action=%s\n", robotCore.phaseName().c_str(), robotCore.goalName().c_str(), robotCore.actionName().c_str());
+        return;
+    }
+
+    if (command == "perception_status") {
+        const WorldState& w = robotCore.worldState();
+        Serial.printf("[PERCEPTION] line=%s color=%s conf=%.2f target=%s picked=%s placed=%s obstacle=%s home=%s\\n",
+            Perception::lineName(w.line), Perception::colorName(w.targetColor.color), w.targetColor.confidence,
+            w.targetDetected?"true":"false", w.targetPicked?"true":"false", w.targetPlaced?"true":"false",
+            w.obstacleDetected?"true":"false", w.homeDetected?"true":"false");
         return;
     }
 
@@ -585,6 +623,7 @@ void setup()
     thermal.begin();
     motionSafety.begin();
     robotCore.begin();
+    robotCore.setPerceptionInput(perceptionInput);
     webServer.begin();
     Serial.printf("[WIFI] AP ready: XZORT-RESCUE / IP %s\n", webServer.ip().c_str());
 
@@ -592,6 +631,8 @@ void setup()
 
     Serial.println("[BOOT] Firmware READY");
     Serial.println("[BOOT] Offline decision engine READY");
+    Serial.println("[BOOT] Perception layer READY");
+    Serial.println("[BOOT] Gemini online layer READY (optional, Wi-Fi required)");
     Serial.println("[BOOT] Type 'help' for commands");
     Serial.println();
 }
