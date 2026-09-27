@@ -21,14 +21,15 @@ MotionSafety motionSafety;
 String serialBuffer;
 bool safetyStopLatched = false;
 unsigned long lastTelemetryMs = 0;
+unsigned long lastMotionMs = 0;
 
 String jsonValue(const String& json, const String& key)
 {
-    const String needle = String("\"") + key + "\":\"";
+    const String needle = String(""") + key + "":"";
     int start = json.indexOf(needle);
     if (start < 0) return "";
     start += needle.length();
-    int end = json.indexOf("\"", start);
+    int end = json.indexOf(""", start);
     if (end < 0) return "";
     return json.substring(start, end);
 }
@@ -42,7 +43,7 @@ void processJsonPacket(const String& packet)
         safetyStopLatched = true;
         motionSafety.emergencyStop();
         motionController.disable();
-        Serial.println("{\"type\":\"ack\",\"command\":\"STOP\",\"ok\":true}");
+        Serial.println("{"type":"ack","command":"STOP","ok":true}");
         return;
     }
 
@@ -50,42 +51,70 @@ void processJsonPacket(const String& packet)
         motionSafety.resume();
         safetyStopLatched = false;
         motionController.enable();
-        Serial.println("{\"type\":\"ack\",\"command\":\"RESUME\",\"ok\":true}");
+        Serial.println("{"type":"ack","command":"RESUME","ok":true}");
         return;
     }
 
     if (command == "ENABLE") {
         if (safetyStopLatched || !motionSafety.allowed()) {
-            Serial.println("{\"type\":\"error\",\"error\":\"SAFETY_BLOCK\"}");
+            Serial.println("{"type":"error","error":"SAFETY_BLOCK"}");
             return;
         }
         motionController.enable();
         motionSafety.noteMotionCommand();
-        Serial.println("{\"type\":\"ack\",\"command\":\"ENABLE\"}");
+        Serial.println("{"type":"ack","command":"ENABLE"}");
         return;
     }
 
     if (command == "CENTER") {
         if (safetyStopLatched || !motionSafety.allowed()) {
-            Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":false,\"error\":\"E_STOP\"}");
+            Serial.println("{"type":"ack","command":"CENTER","ok":false,"error":"E_STOP"}");
             return;
         }
         motionController.center();
-        Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":true}");
+        Serial.println("{"type":"ack","command":"CENTER","ok":true}");
         return;
     }
 
     if (command == "STAND") {
         if (safetyStopLatched || !motionSafety.allowed()) {
-            Serial.println("{\"type\":\"ack\",\"command\":\"STAND\",\"ok\":false,\"error\":\"E_STOP\"}");
+            Serial.println("{"type":"ack","command":"STAND","ok":false,"error":"E_STOP"}");
             return;
         }
         motionController.stand();
-        Serial.println("{\"type\":\"ack\",\"command\":\"STAND\",\"ok\":true}");
+        Serial.println("{"type":"ack","command":"STAND","ok":true}");
         return;
     }
 
-    Serial.println("{\"type\":\"error\",\"error\":\"UNKNOWN_COMMAND\"}");
+    if (command == "GAIT") {
+        String mode = jsonValue(packet, "mode");
+        mode.toUpperCase();
+
+        if (safetyStopLatched || !motionSafety.allowed()) {
+            Serial.println("{"type":"ack","command":"GAIT","ok":false,"error":"E_STOP"}");
+            return;
+        }
+
+        if (
+            mode != "WALK" &&
+            mode != "SLOW_WALK" &&
+            mode != "SEARCH" &&
+            mode != "RESCUE"
+        ) {
+            Serial.println("{"type":"ack","command":"GAIT","ok":false,"error":"BAD_MODE"}");
+            return;
+        }
+
+        motionController.setGait(mode);
+        motionSafety.noteMotionCommand();
+        Serial.printf(
+            "{"type":"ack","command":"GAIT","ok":true,"mode":"%s"}\n",
+            mode.c_str()
+        );
+        return;
+    }
+
+    Serial.println("{"type":"error","error":"UNKNOWN_COMMAND"}");
 }
 
 void emitTelemetry()
@@ -94,15 +123,19 @@ void emitTelemetry()
         return;
 
     lastTelemetryMs = millis();
+
     HardwareStatus status = {
         pca9685.available(), false, false, false, false, false,
         motionSafety.allowed()
     };
 
     Serial.printf(
-        "{\"type\":\"telemetry\",\"firmware\":\"%s\",\"safety_stop\":%s,\"hardware\":%s}\n",
+        "{"type":"telemetry","firmware":"%s","safety_stop":%s,"gait":"%s","phase":%.3f,"moving":%s,"hardware":%s}\n",
         FIRMWARE_VERSION,
         safetyStopLatched ? "true" : "false",
+        motionController.gait().mode(),
+        motionController.gait().phase(),
+        motionController.gait().moving() ? "true" : "false",
         hardwareStatusJson(status).c_str()
     );
 }
@@ -113,40 +146,26 @@ void printHelp()
     Serial.println("================================================");
     Serial.println("             AI QUADRUPED ROBOT");
     Serial.println("================================================");
-
     Serial.println("SYSTEM");
-    Serial.println("  help");
-    Serial.println("  status");
-    Serial.println("  center");
-    Serial.println("  stand");
-    Serial.println("  enable");
-    Serial.println("  disable");
-    Serial.println("  debug");
-
+    Serial.println("  help | status | center | stand | enable | disable | debug");
     Serial.println();
     Serial.println("SERVO");
     Serial.println("  servo <channel> <angle>");
     Serial.println("  leg <FL|FR|RL|RR> <C> <F> <T>");
-
     Serial.println();
     Serial.println("CALIBRATION");
-    Serial.println("  cal");
-    Serial.println("  cal <channel>");
+    Serial.println("  cal | cal <channel>");
     Serial.println("  caloffset <channel> <offset>");
     Serial.println("  calinvert <channel> <0|1>");
     Serial.println("  callimit <channel> <min> <max>");
-
     Serial.println();
     Serial.println("KINEMATICS");
     Serial.println("  ik <x> <y> <z>");
     Serial.println("  ikleg <FL|FR|RL|RR> <x> <y> <z>");
-
-    Serial.println();
-    Serial.println("MOTION");
     Serial.println("  pose <FL|FR|RL|RR> <x> <y> <z>");
-    Serial.println("  stand");
-
     Serial.println();
+    Serial.println("GAIT");
+    Serial.println("  gait <WALK|SLOW_WALK|SEARCH|RESCUE>");
     Serial.println("================================================");
     Serial.println();
 }
@@ -163,10 +182,7 @@ void processCommand(String command)
     if (command.length() == 0)
         return;
 
-    Serial.printf(
-        "[CMD] %s\n",
-        command.c_str()
-    );
+    Serial.printf("[CMD] %s\n", command.c_str());
 
     if (command == "help") {
         printHelp();
@@ -184,14 +200,20 @@ void processCommand(String command)
     }
 
     if (command == "center") {
-        if (safetyStopLatched || !motionSafety.allowed()) { Serial.println("[SAFETY] E-STOP active"); return; }
+        if (safetyStopLatched || !motionSafety.allowed()) {
+            Serial.println("[SAFETY] E-STOP active");
+            return;
+        }
         motionController.center();
         motionSafety.noteMotionCommand();
         return;
     }
 
     if (command == "stand") {
-        if (safetyStopLatched || !motionSafety.allowed()) { Serial.println("[SAFETY] E-STOP active"); return; }
+        if (safetyStopLatched || !motionSafety.allowed()) {
+            Serial.println("[SAFETY] E-STOP active");
+            return;
+        }
         motionController.stand();
         motionSafety.noteMotionCommand();
         return;
@@ -212,222 +234,110 @@ void processCommand(String command)
         return;
     }
 
+    if (command == "stop") {
+        safetyStopLatched = true;
+        motionSafety.emergencyStop();
+        motionController.disable();
+        Serial.println("[SAFETY] E-STOP");
+        return;
+    }
+
+    if (command == "resume") {
+        motionSafety.resume();
+        safetyStopLatched = false;
+        motionController.enable();
+        Serial.println("[SAFETY] RESUMED");
+        return;
+    }
+
+    int channel, angle, offset, invert, minAngle, maxAngle;
+
     if (command == "cal") {
         motionController.printCalibration();
         return;
     }
 
-    int channel;
-    int angle;
-    int offset;
-    int invert;
-    int minAngle;
-    int maxAngle;
-
-    if (sscanf(
-            command.c_str(),
-            "cal %d",
-            &channel
-        ) == 1) {
-
-        motionController.printCalibration(
-            channel
-        );
-
+    if (sscanf(command.c_str(), "cal %d", &channel) == 1) {
+        motionController.printCalibration(channel);
         return;
     }
 
-    if (sscanf(
-            command.c_str(),
-            "caloffset %d %d",
-            &channel,
-            &offset
-        ) == 2) {
-
-        motionController.setCalibrationOffset(
-            channel,
-            offset
-        );
-
+    if (sscanf(command.c_str(), "caloffset %d %d", &channel, &offset) == 2) {
+        motionController.setCalibrationOffset(channel, offset);
         return;
     }
 
-    if (sscanf(
-            command.c_str(),
-            "calinvert %d %d",
-            &channel,
-            &invert
-        ) == 2) {
-
-        motionController.setCalibrationInvert(
-            channel,
-            invert != 0
-        );
-
+    if (sscanf(command.c_str(), "calinvert %d %d", &channel, &invert) == 2) {
+        motionController.setCalibrationInvert(channel, invert != 0);
         return;
     }
 
-    if (sscanf(
-            command.c_str(),
-            "callimit %d %d %d",
-            &channel,
-            &minAngle,
-            &maxAngle
-        ) == 3) {
-
-        motionController.setCalibrationLimits(
-            channel,
-            minAngle,
-            maxAngle
-        );
-
+    if (sscanf(command.c_str(), "callimit %d %d %d", &channel, &minAngle, &maxAngle) == 3) {
+        motionController.setCalibrationLimits(channel, minAngle, maxAngle);
         return;
     }
 
-    if (sscanf(
-            command.c_str(),
-            "servo %d %d",
-            &channel,
-            &angle
-        ) == 2) {
-
+    if (sscanf(command.c_str(), "servo %d %d", &channel, &angle) == 2) {
         if (safetyStopLatched) {
             Serial.println("[SAFETY] E-STOP active");
             return;
         }
-
-        motionController.setServo(
-            channel,
-            angle
-        );
-
+        motionController.setServo(channel, angle);
         return;
     }
 
     char name[4];
+    int coxa, femur, tibia;
 
-    int coxa;
-    int femur;
-    int tibia;
-
-    if (sscanf(
-            command.c_str(),
-            "leg %3s %d %d %d",
-            name,
-            &coxa,
-            &femur,
-            &tibia
-        ) == 4) {
-
-        motionController.setLeg(
-            String(name),
-            coxa,
-            femur,
-            tibia
-        );
-
+    if (sscanf(command.c_str(), "leg %3s %d %d %d", name, &coxa, &femur, &tibia) == 4) {
+        motionController.setLeg(String(name), coxa, femur, tibia);
         return;
     }
 
-    float x;
-    float y;
-    float z;
+    float x, y, z;
 
-    if (sscanf(
-            command.c_str(),
-            "ik %f %f %f",
-            &x,
-            &y,
-            &z
-        ) == 3) {
-
-        motionController.testIK(
-            x,
-            y,
-            z
-        );
-
+    if (sscanf(command.c_str(), "ik %f %f %f", &x, &y, &z) == 3) {
+        motionController.testIK(x, y, z);
         return;
     }
 
-    if (sscanf(
-            command.c_str(),
-            "ikleg %3s %f %f %f",
-            name,
-            &x,
-            &y,
-            &z
-        ) == 4) {
-
-        motionController.setLegIK(
-            String(name),
-            x,
-            y,
-            z
-        );
-
+    if (sscanf(command.c_str(), "ikleg %3s %f %f %f", name, &x, &y, &z) == 4) {
+        motionController.setLegIK(String(name), x, y, z);
         return;
     }
 
-    if (sscanf(
-            command.c_str(),
-            "pose %3s %f %f %f",
-            name,
-            &x,
-            &y,
-            &z
-        ) == 4) {
-
-        motionController.setLegIK(
-            String(name),
-            x,
-            y,
-            z
-        );
-
+    if (sscanf(command.c_str(), "pose %3s %f %f %f", name, &x, &y, &z) == 4) {
+        motionController.setFootTarget(String(name), x, y, z);
         return;
     }
 
-    Serial.println(
-        "[ERROR] Unknown command."
-    );
+    char gaitMode[16];
 
-    Serial.println(
-        "Type 'help' for commands."
-    );
+    if (sscanf(command.c_str(), "gait %15s", gaitMode) == 1) {
+        if (safetyStopLatched || !motionSafety.allowed()) {
+            Serial.println("[SAFETY] gait blocked");
+            return;
+        }
+
+        motionController.setGait(String(gaitMode));
+        motionSafety.noteMotionCommand();
+        return;
+    }
+
+    Serial.println("[ERROR] Unknown command. Type 'help'.");
 }
 
 void setup()
 {
-    Serial.begin(
-        SERIAL_BAUD
-    );
-
+    Serial.begin(SERIAL_BAUD);
     delay(500);
 
     Serial.println();
-    Serial.println(
-        "================================================"
-    );
-
-    Serial.println(
-        "             AI QUADRUPED ROBOT"
-    );
-
-    Serial.println(
-        "================================================"
-    );
-
-    Serial.printf(
-        "Firmware : %s\n",
-        FIRMWARE_VERSION
-    );
-
-    Serial.printf(
-        "Target   : %s\n",
-        ROBOT_NAME
-    );
-
+    Serial.println("================================================");
+    Serial.println("             AI QUADRUPED ROBOT");
+    Serial.println("================================================");
+    Serial.printf("Firmware : %s\n", FIRMWARE_VERSION);
+    Serial.printf("Target   : %s\n", ROBOT_NAME);
     Serial.println();
 
     motionController.begin();
@@ -438,14 +348,10 @@ void setup()
     thermal.begin();
     motionSafety.begin();
 
-    Serial.println(
-        "[BOOT] Firmware READY"
-    );
+    lastMotionMs = millis();
 
-    Serial.println(
-        "[BOOT] Type 'help' for commands"
-    );
-
+    Serial.println("[BOOT] Firmware READY");
+    Serial.println("[BOOT] Type 'help' for commands");
     Serial.println();
 }
 
@@ -457,38 +363,38 @@ void loop()
         safetyStopLatched = true;
         motionSafety.emergencyStop();
         motionController.disable();
-        Serial.println("{\"type\":\"safety\",\"event\":\"MOTION_TIMEOUT\"}");
+        Serial.println("{"type":"safety","event":"MOTION_TIMEOUT"}");
+    }
+
+    const unsigned long now = millis();
+
+    if (
+        now - lastMotionMs >= MOTION_UPDATE_MS &&
+        !safetyStopLatched &&
+        motionSafety.allowed()
+    ) {
+        const float dt =
+            static_cast<float>(now - lastMotionMs) / 1000.0f;
+
+        lastMotionMs = now;
+        motionController.update(dt);
     }
 
     while (Serial.available()) {
+        const char c = static_cast<char>(Serial.read());
 
-        const char c =
-            static_cast<char>(
-                Serial.read()
-            );
-
-        if (c == '\n' || c == '\r') {
-
+        if (c == '
+' || c == '') {
             if (serialBuffer.length() > 0) {
-
-                processCommand(
-                    serialBuffer
-                );
-
+                processCommand(serialBuffer);
                 serialBuffer = "";
             }
-
         } else {
-
             serialBuffer += c;
 
             if (serialBuffer.length() > 128) {
-
                 serialBuffer = "";
-
-                Serial.println(
-                    "[ERROR] Command too long"
-                );
+                Serial.println("[ERROR] Command too long");
             }
         }
     }
