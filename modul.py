@@ -3,8 +3,16 @@ import math
 from build123d import *
 
 # ============================================================
-# RESCUE QUADRUPED — FDM PRINT V4
-# DRAGON-BACK / DRAGON-TAIL BODY DESIGN
+# RESCUE QUADRUPED — FDM PRINT V5
+# FULL DRAGON SHELL / HIDDEN-FASTENER MECHANICAL DESIGN
+#
+# V5 focus:
+#   - continuous dragon silhouette from head -> torso -> tail
+#   - layered armor instead of box-like exposed mechanics
+#   - recessed/counterbored fasteners and service-side mounting
+#   - articulated tail with real connector sockets
+#   - leg shells/bosses shaped as dragon limbs
+#   - printable parts remain separate for maintenance
 #
 # V4 adds:
 #   - sculpted central body
@@ -27,6 +35,7 @@ os.makedirs(CAD_OUT, exist_ok=True)
 
 P = {
     "robot_height": 800.0,
+    "design_version": "V5_DRAGON_SHELL_HIDDEN_FASTENER",
 
     # Prototype servo envelope.
     "servo_w": 20.0,
@@ -43,6 +52,9 @@ P = {
     "m3_hole": 3.4,
     "m3_insert": 4.3,
     "pivot_hole": 4.2,
+    "fastener_head": 6.2,
+    "fastener_depth": 3.2,
+    "armor_t": 4.0,
 
     # Foot.
     "foot_diameter": 30.0,
@@ -98,364 +110,298 @@ def export_master(part, name):
 # HIP — smoother dragon/mechanical housing
 # ============================================================
 def hip_bracket():
-    outer_w = W + 2 * WALL
-    outer_l = L + 2 * WALL
+    """Dragon shoulder/hip housing with recessed service-side fasteners."""
+    outer_w = W + 2 * WALL + 4
+    outer_l = L + 2 * WALL + 4
     outer_h = H + WALL
 
     with BuildPart() as p:
-        Box(
-            outer_w, outer_l, outer_h,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-        )
+        Box(outer_w, outer_l, outer_h,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
 
+        # Servo cavity: the servo is captured inside the shell.
         with BuildPart(mode=Mode.SUBTRACT):
-            Box(
-                W + 2 * CLR,
-                L + 2 * CLR,
-                H + 0.8,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+            Box(W + 2 * CLR, L + 2 * CLR, H + 1.0,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-            with Locations(Pos(0, -(L / 2 + WALL / 2), H * 0.62)):
-                Box(
-                    W * 0.60,
-                    WALL + 2.0,
-                    H * 0.55,
-                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
-                )
-
-        # Rounded shoulder ears.
-        ear_x = outer_w / 2 + WALL * 1.2
+        # Dragon shoulder armor, integrated into the housing.
         with BuildPart(mode=Mode.ADD):
-            with Locations(Pos(ear_x, 0, 0), Pos(-ear_x, 0, 0)):
-                Cylinder(
-                    radius=10.0,
-                    height=WALL,
-                    align=(Align.CENTER, Align.CENTER, Align.MIN),
-                )
+            with Locations(
+                Pos(-outer_w * 0.50, -outer_l * 0.15, outer_h * 0.55),
+                Pos( outer_w * 0.50, -outer_l * 0.15, outer_h * 0.55),
+            ):
+                Sphere(radius=12.0)
+
+        # Recessed mounting channels. Fastener heads sit below the skin.
+        for x in (-outer_w * 0.30, outer_w * 0.30):
+            with BuildPart(mode=Mode.SUBTRACT):
+                with Locations(Pos(x, outer_l * 0.18, outer_h - 2.0)):
+                    Cylinder(radius=M3_R, height=outer_h + 4)
+                with Locations(Pos(x, outer_l * 0.18, outer_h - P["fastener_depth"] / 2)):
+                    Cylinder(radius=P["fastener_head"] / 2,
+                             height=P["fastener_depth"] + 0.4)
+
+        # Hidden-side pivot boss; screw access is from the inner face.
+        with BuildPart(mode=Mode.ADD):
+            with Locations(Pos(0, 0, outer_h * 0.50)):
+                Cylinder(radius=16.0, height=outer_w * 0.70,
+                         rotation=(0, 90, 0))
 
         with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(
-                Pos(ear_x, 0, WALL / 2),
-                Pos(-ear_x, 0, WALL / 2),
-            ):
-                Cylinder(radius=M3_R, height=WALL + 2)
+            with Locations(Pos(0, 0, outer_h * 0.50)):
+                Cylinder(radius=PIVOT_R, height=outer_w + 6,
+                         rotation=(0, 90, 0))
 
-    p.part.label = "DRAGON_HIP_BRACKET_PRINT"
+    p.part.label = "DRAGON_HIP_HIDDEN_FASTENER_PRINT"
     return p.part
 
-
-# ============================================================
-# THIGH — tapered dragon scale silhouette + ribs
-# ============================================================
 def thigh_link():
+    """Armored thigh beam with recessed fastener pockets."""
     length = P["thigh_length"]
-    beam_w = 30.0
-    beam_h = 18.0
+    beam_w = 34.0
+    beam_h = 22.0
 
     with BuildPart() as p:
-        Box(
-            beam_w,
-            length,
-            beam_h,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-        )
+        # Tapered-looking structural core.
+        Box(beam_w, length, beam_h,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Rounded joint bosses.
+        # Large joint bosses blend into the beam.
         with BuildPart(mode=Mode.ADD):
-            with Locations(Pos(0, 0, 0), Pos(0, length, 0)):
-                Cylinder(
-                    radius=18.0,
-                    height=beam_h,
-                    align=(Align.CENTER, Align.CENTER, Align.MIN),
-                )
+            with Locations(Pos(0, 0, beam_h / 2), Pos(0, length, beam_h / 2)):
+                Cylinder(radius=19.0, height=beam_h,
+                         rotation=(0, 90, 0))
 
-        # Narrow top relief for weight saving.
-        with BuildPart(mode=Mode.SUBTRACT):
-            Box(
-                14.0,
-                max(50.0, length - 50.0),
-                beam_h * 0.50,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
-
-        # Raised longitudinal dragon ribs.
-        rib_y = [length * 0.25, length * 0.50, length * 0.75]
+        # Dragon armor spine on the outer face.
         with BuildPart(mode=Mode.ADD):
-            for y in rib_y:
+            with Locations(Pos(0, length * 0.50, beam_h)):
+                Cone(bottom_radius=13.0, top_radius=4.0, height=8.0,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
+
+        # Three recessed armor ribs.
+        for y in (length * 0.25, length * 0.50, length * 0.75):
+            with BuildPart(mode=Mode.ADD):
                 with Locations(Pos(0, y, beam_h)):
-                    Box(
-                        38.0,
-                        5.0,
-                        3.0,
-                        align=(Align.CENTER, Align.CENTER, Align.MIN),
-                    )
+                    Box(40.0, 6.0, 3.5,
+                        align=(Align.CENTER, Align.CENTER, Align.MIN))
 
+        # Pivot holes run through the joint bosses.
         with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(
-                Pos(0, 0, beam_h / 2),
-                Pos(0, length, beam_h / 2),
-            ):
-                Cylinder(radius=PIVOT_R, height=beam_h + 3)
+            with Locations(Pos(0, 0, beam_h / 2), Pos(0, length, beam_h / 2)):
+                Cylinder(radius=PIVOT_R, height=beam_w + 8,
+                         rotation=(0, 90, 0))
 
-    p.part.label = "DRAGON_THIGH_LINK_PRINT"
+        # Counterbores keep screw heads flush instead of sticking outside.
+        with BuildPart(mode=Mode.SUBTRACT):
+            for y in (12.0, length - 12.0):
+                with Locations(Pos(0, y, beam_h - 1.4)):
+                    Cylinder(radius=P["fastener_head"] / 2,
+                             height=P["fastener_depth"])
+
+    p.part.label = "DRAGON_ARMORED_THIGH_PRINT"
     return p.part
 
-
-# ============================================================
-# SHIN — tapered mechanical dragon leg
-# ============================================================
 def knee_shin():
+    """Tapered dragon shin with enclosed foot/pivot geometry."""
     length = P["shin_length"]
 
     with BuildPart() as p:
-        Cone(
-            bottom_radius=11.0,
-            top_radius=17.0,
-            height=length,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-        )
+        Cone(bottom_radius=12.0, top_radius=19.0, height=length,
+             align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Structural side ribs.
+        # Outer armor blade follows the leg instead of looking like a box.
         with BuildPart(mode=Mode.ADD):
-            with Locations(Pos(0, 0, length * 0.35)):
-                Box(
-                    5.0, 34.0, length * 0.45,
-                    align=(Align.CENTER, Align.CENTER, Align.MIN),
-                )
+            with Locations(Pos(0, 0, length * 0.20)):
+                Box(5.0, 30.0, length * 0.55,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Knee housing.
-        with Locations(Pos(0, 0, length - 28)):
-            Box(
-                W + 2 * WALL + 2 * CLR,
-                38.0,
-                38.0,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+        # Knee collar.
+        with BuildPart(mode=Mode.ADD):
+            with Locations(Pos(0, 0, length - 25.0)):
+                Cylinder(radius=22.0, height=28.0,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
 
+        # Cross pivot is mechanically enclosed.
         with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(Pos(0, 0, length - 8)):
-                Cylinder(
-                    radius=PIVOT_R,
-                    height=45,
-                    rotation=(0, 90, 0),
-                )
+            with Locations(Pos(0, 0, length - 11.0)):
+                Cylinder(radius=PIVOT_R, height=48.0,
+                         rotation=(0, 90, 0))
 
+        # Foot pad.
         with Locations(Pos(0, 0, -P["foot_thickness"])):
-            Cylinder(
-                radius=P["foot_diameter"] / 2,
-                height=P["foot_thickness"],
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+            Cylinder(radius=P["foot_diameter"] / 2,
+                     height=P["foot_thickness"],
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-    p.part.label = "DRAGON_KNEE_SHIN_PRINT"
+    p.part.label = "DRAGON_ARMORED_SHIN_PRINT"
     return p.part
 
-
-# ============================================================
-# BODY — central armored dragon torso
-#
-# Coordinate convention:
-#   X = left/right
-#   Y = front/back
-#   Z = up
-#   Front = -Y
-#   Tail = +Y
-# ============================================================
 def body_shell():
+    """Main dragon torso: curved silhouette, armor plates, hidden service fasteners."""
     bl = P["body_length"]
     bw = P["body_width"]
     bh = P["body_height"]
 
     with BuildPart() as p:
-        # Main low-profile torso.
-        Box(
-            bw, bl, bh,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-        )
+        # Core torso.
+        Box(bw, bl, bh, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Rounded armor shoulders/front and rear.
+        # Rounded front/rear shoulders make the body read as one creature.
         with BuildPart(mode=Mode.ADD):
             with Locations(
-                Pos(0, -bl * 0.43, bh * 0.45),
-                Pos(0, bl * 0.43, bh * 0.45),
+                Pos(0, -bl * 0.42, bh * 0.48),
+                Pos(0,  bl * 0.40, bh * 0.48),
             ):
-                Sphere(radius=bw * 0.43)
+                Sphere(radius=bw * 0.42)
 
-        # Electronics cavity from the underside.
+        # Underside electronics/service cavity.
         with BuildPart(mode=Mode.SUBTRACT):
-            Box(
-                bw - 2 * P["body_wall"],
-                bl - 42.0,
-                bh * 0.55,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+            Box(bw - 2 * P["body_wall"], bl - 46.0, bh * 0.48,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Four servo mounting towers.
+        # Continuous dragon shoulder armor.
+        for x in (-bw * 0.36, bw * 0.36):
+            with BuildPart(mode=Mode.ADD):
+                with Locations(Pos(x, -bl * 0.30, bh)):
+                    Sphere(radius=22.0)
+
+        # Top armor spine: large central ridge + smaller scales.
+        with BuildPart(mode=Mode.ADD):
+            with Locations(Pos(0, -bl * 0.05, bh)):
+                Box(34.0, bl * 0.64, P["armor_t"] + 8.0),
+            with Locations(
+                Pos(0, -bl * 0.30, bh + 7),
+                Pos(0, -bl * 0.10, bh + 9),
+                Pos(0,  bl * 0.10, bh + 9),
+                Pos(0,  bl * 0.30, bh + 7),
+            ):
+                Cone(bottom_radius=13.0, top_radius=2.5, height=13.0,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
+
+        # Four internal servo towers. Mounting screws enter from the service side.
         tower_x = bw * 0.34
         tower_y = bl * 0.28
         with BuildPart(mode=Mode.ADD):
             for x in (-tower_x, tower_x):
                 for y in (-tower_y, tower_y):
-                    with Locations(Pos(x, y, bh)):
-                        Cylinder(
-                            radius=13.0,
-                            height=10.0,
-                            align=(Align.CENTER, Align.CENTER, Align.MIN),
-                        )
+                    with Locations(Pos(x, y, bh - 2)):
+                        Cylinder(radius=14.0, height=10.0,
+                                 align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # M3 holes through mounting towers.
+        # Through bores with recessed screw heads. No proud screw heads on the skin.
         with BuildPart(mode=Mode.SUBTRACT):
             for x in (-tower_x, tower_x):
                 for y in (-tower_y, tower_y):
-                    with Locations(Pos(x, y, bh + 5)):
-                        Cylinder(radius=M3_R, height=14.0)
+                    with Locations(Pos(x, y, bh - 1)):
+                        Cylinder(radius=M3_R, height=15.0)
+                    with Locations(Pos(x, y, bh - 3.0)):
+                        Cylinder(radius=P["fastener_head"] / 2,
+                                 height=P["fastener_depth"] + 0.5)
 
-        # Dragon spine armor — repeated low fins.
-        fin_count = 5
-        for i in range(fin_count):
-            y = -bl * 0.30 + i * (bl * 0.15)
-            fin_h = 9.0 if i in (0, fin_count - 1) else 13.0
-            with BuildPart(mode=Mode.ADD):
-                with Locations(Pos(0, y, bh)):
-                    Cone(
-                        bottom_radius=14.0,
-                        top_radius=3.0,
-                        height=fin_h,
-                        align=(Align.CENTER, Align.CENTER, Align.MIN),
-                    )
+        # Rear tail socket is integrated into the body.
+        with BuildPart(mode=Mode.ADD):
+            with Locations(Pos(0, bl * 0.52, bh * 0.42)):
+                Cylinder(radius=22.0, height=24.0,
+                         rotation=(90, 0, 0))
 
-    p.part.label = "DRAGON_BODY_SHELL_PRINT"
+        with BuildPart(mode=Mode.SUBTRACT):
+            with Locations(Pos(0, bl * 0.52, bh * 0.42)):
+                Cylinder(radius=12.0, height=34.0,
+                         rotation=(90, 0, 0))
+
+    p.part.label = "DRAGON_FULL_ARMOR_BODY_PRINT"
     return p.part
 
-
-# ============================================================
-# HEAD — compact dragon head with two drilled eye holes
-# ============================================================
 def dragon_head():
+    """More creature-like head with recessed eyes, nostrils and brow armor."""
     with BuildPart() as p:
-        # Main head block + snout.
-        Box(
-            P["head_width"],
-            P["head_length"],
-            P["head_height"],
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-        )
-
+        # Main skull and tapered snout.
+        Box(P["head_width"], P["head_length"], P["head_height"],
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
         with BuildPart(mode=Mode.ADD):
             with Locations(Pos(0, -P["head_length"] * 0.48, 8)):
-                Box(
-                    P["head_width"] * 0.72,
-                    30.0,
-                    P["head_height"] * 0.62,
-                    align=(Align.CENTER, Align.CENTER, Align.MIN),
-                )
+                Cone(bottom_radius=P["head_width"] * 0.43,
+                     top_radius=P["head_width"] * 0.30,
+                     height=30.0,
+                     rotation=(90, 0, 0),
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Eye sockets: actual through-holes, suitable for LED/camera
-        # inserts or simply leaving as open printed holes.
         eye_x = P["head_width"] * 0.31
-        eye_y = -P["head_length"] * 0.20
-        eye_z = P["head_height"] * 0.67
+        eye_y = -P["head_length"] * 0.18
+        eye_z = P["head_height"] * 0.68
 
+        # Eye pockets are recessed: LED/camera lens sits inside the head.
         with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(
-                Pos(-eye_x, eye_y, eye_z),
-                Pos(eye_x, eye_y, eye_z),
-            ):
-                Cylinder(
-                    radius=P["eye_hole"] / 2,
-                    height=30.0,
-                    rotation=(1, 0, 0),
-                )
+            for x in (-eye_x, eye_x):
+                with Locations(Pos(x, eye_y, eye_z)):
+                    Cylinder(radius=7.0, height=10.0, rotation=(1, 0, 0))
+                    with Locations(Pos(0, 3.0, 0)):
+                        Cylinder(radius=P["eye_hole"] / 2, height=26.0,
+                                 rotation=(1, 0, 0))
 
-        # Small nostril holes.
+        # Small nostrils.
         with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(
-                Pos(-10.0, -P["head_length"] * 0.49, 26.0),
-                Pos(10.0, -P["head_length"] * 0.49, 26.0),
-            ):
-                Cylinder(
-                    radius=2.5,
-                    height=12.0,
-                    rotation=(1, 0, 0),
-                )
+            for x in (-10.0, 10.0):
+                with Locations(Pos(x, -P["head_length"] * 0.49, 25.0)):
+                    Cylinder(radius=2.5, height=12.0, rotation=(1, 0, 0))
 
-        # Brow horns/fins.
+        # Brow armor and horns.
         with BuildPart(mode=Mode.ADD):
-            with Locations(
-                Pos(-eye_x, 0, P["head_height"]),
-                Pos(eye_x, 0, P["head_height"]),
-            ):
-                Cone(
-                    bottom_radius=7.0,
-                    top_radius=1.5,
-                    height=18.0,
-                    align=(Align.CENTER, Align.CENTER, Align.MIN),
-                )
+            for x in (-eye_x, eye_x):
+                with Locations(Pos(x, -4.0, P["head_height"])):
+                    Cone(bottom_radius=8.0, top_radius=1.0, height=22.0,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-    p.part.label = "DRAGON_HEAD_EYE_HOLES_PRINT"
+        # Lower jaw plate.
+        with BuildPart(mode=Mode.ADD):
+            with Locations(Pos(0, -P["head_length"] * 0.42, 5.0)):
+                Box(P["head_width"] * 0.58, 28.0, 8.0,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN))
+
+    p.part.label = "DRAGON_HEAD_RECESSED_EYES_PRINT"
     return p.part
 
-
-# ============================================================
-# TAIL MODULE — dragon-like articulated rear tail
-#
-# Each module is printed separately and can be assembled as:
-# BODY -> TAIL 01 -> 02 -> 03 -> 04 -> 05 -> TIP
-# The modules progressively taper and curve upward.
-# ============================================================
 def dragon_tail_module(index):
+    """Articulated tail segment with socket + hidden cross-pin."""
     count = P["tail_modules"]
     t = index / max(1, count - 1)
-
-    radius = (
-        P["tail_base_radius"] * (1.0 - t)
-        + P["tail_tip_radius"] * t
-    )
+    r1 = P["tail_base_radius"] * (1.0 - t) + P["tail_tip_radius"] * t
+    r2 = max(3.0, r1 - 4.5)
     length = P["tail_module_length"]
 
-    # Gentle upward curve toward the tail tip.
-    angle_deg = -12.0 + index * 7.0
-
     with BuildPart() as p:
-        Cone(
-            bottom_radius=radius,
-            top_radius=max(3.0, radius - 4.0),
-            height=length,
-            align=(Align.CENTER, Align.CENTER, Align.MIN),
-        )
+        # Rounded/tapered segment.
+        Cone(bottom_radius=r1, top_radius=r2, height=length,
+             align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Connector collar at base.
-        with Locations(Pos(0, 0, 0)):
-            Cylinder(
-                radius=radius + 3.0,
-                height=6.0,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+        # Base collar and forward socket.
+        with BuildPart(mode=Mode.ADD):
+            Cylinder(radius=r1 + 3.0, height=7.0,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
+            with Locations(Pos(0, 0, length - 7.0)):
+                Cylinder(radius=r2 + 2.5, height=7.0,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Central M4-ish assembly bore.
+        # Female axial socket at the base, male-style reduced nose at the tip.
         with BuildPart(mode=Mode.SUBTRACT):
-            Cylinder(
-                radius=2.2,
-                height=length + 3.0,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+            Cylinder(radius=max(5.0, r1 * 0.52), height=11.0,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Dragon spine spike.
-        with Locations(Pos(0, length * 0.52, radius * 0.55)):
-            Cone(
-                bottom_radius=max(3.0, radius * 0.38),
-                top_radius=0.8,
-                height=12.0 + 7.0 * (1.0 - t),
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+        # Hidden cross-pin bore, kept inside the collar silhouette.
+        with BuildPart(mode=Mode.SUBTRACT):
+            with Locations(Pos(0, 0, 5.0)):
+                Cylinder(radius=2.2, height=(r1 + 8.0) * 2,
+                         rotation=(0, 90, 0))
+
+        # Dorsal scale/spike.
+        with Locations(Pos(0, length * 0.52, r1 * 0.55)):
+            Cone(bottom_radius=max(3.0, r1 * 0.40), top_radius=0.8,
+                 height=14.0 + 6.0 * (1.0 - t),
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
 
     part = p.part
-    part.label = f"DRAGON_TAIL_MODULE_{index + 1:02d}"
-
-    # Rotate each module to create the curved silhouette.
-    return part.rotate(Axis.X, angle_deg)
-
+    part.label = f"DRAGON_TAIL_ARMORED_{index + 1:02d}"
+    return part.rotate(Axis.X, -10.0 + index * 6.0)
 
 def dragon_tail_tip():
     with BuildPart() as p:
@@ -481,7 +427,7 @@ def dragon_tail_tip():
 # ============================================================
 # BUILD / EXPORT
 # ============================================================
-print("[PRINT V4] Generating dragon-style FDM modules...")
+print("[PRINT V5] Generating full dragon shell + hidden-fastener FDM modules...")
 
 hip = hip_bracket()
 thigh = thigh_link()
@@ -558,11 +504,12 @@ export_master(assembly, "RescueQuadruped_Dragon_Full_Body_ASSEMBLY")
 # PRINT SPEC
 # ============================================================
 with open(os.path.join(OUT, "PRINT_SPEC.txt"), "w", encoding="utf-8") as f:
-    f.write("RESCUE QUADRUPED — FDM PRINT V4 / DRAGON BODY\n")
+    f.write("RESCUE QUADRUPED — FDM PRINT V5 / FULL DRAGON SHELL\n")
     f.write("=" * 62 + "\n\n")
 
     f.write("DESIGN\n")
-    f.write("- Dragon-style central body with armored spine\n")
+    f.write("- Continuous dragon silhouette with armored torso\n")
+    f.write("- Recessed/counterbored fasteners; service-side access\n")
     f.write("- Rear articulated tapering dragon tail\n")
     f.write("- Separate tail modules for easier printing/replacement\n")
     f.write("- Dragon head with drilled eye openings\n")
@@ -593,7 +540,7 @@ with open(os.path.join(OUT, "PRINT_SPEC.txt"), "w", encoding="utf-8") as f:
     f.write("- Print one body/leg/tail test before full production\n")
     f.write("- Verify real servo and fastener dimensions before final print\n")
 
-print("[PRINT V4] DONE")
-print("[PRINT V4] STL: output_cad/print_ready/")
-print("[PRINT V4] STEP: output_cad/cad_master/")
-print("[PRINT V4] SPEC: output_cad/PRINT_SPEC.txt")
+print("[PRINT V5] DONE")
+print("[PRINT V5] STL: output_cad/print_ready/")
+print("[PRINT V5] STEP: output_cad/cad_master/")
+print("[PRINT V5] SPEC: output_cad/PRINT_SPEC.txt")
