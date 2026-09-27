@@ -364,7 +364,32 @@ void RobotCore::setCompetitionInput(const CompetitionInputs& inputs)
     }
 }
 
-void RobotCore::setPerceptionInput(const WorldState& world)\n{\n    perception.setHealthy(world.sensorsHealthy);\n    perception.setLine(world.line);\n    perception.setObstacle(world.obstacleDetected, world.obstacleDistanceCm);\n    perception.setTarget(world.targetDetected);\n    perception.setTargetPicked(world.targetPicked);\n    perception.setTargetPlaced(world.targetPlaced);\n    perception.setColor(world.targetColor, world.colorConfidence, true);\n    perception.setHome(world.homeDetected);\n    perception.setEndGameReady(world.endGameReady);\n    perception.setAllTasksDone(world.allAutonomousTasksDone);\n}\n\nconst WorldState& RobotCore::worldState() const\n{\n    return perception.state();\n}\n\nString RobotCore::colorName() const\n{\n    return String(Perception::colorName(perception.state().targetColor));\n}\n\nString RobotCore::phaseName() const
+void RobotCore::setPerceptionInput(const WorldState& world)
+{
+    perception.setHealthy(world.sensorsHealthy);
+    perception.setLine(world.lineDetected, world.intersectionDetected);
+    perception.setObstacle(world.obstacleDetected, world.obstacleDistance);
+    perception.setTarget(world.targetDetected);
+    perception.setTargetPicked(world.targetPicked);
+    perception.setTargetClassified(world.targetClassified);
+    perception.setTargetPlaced(world.targetPlaced);
+    perception.setColor(world.targetColor, world.colorConfidence, true);
+    perception.setHome(world.homeDetected);
+    perception.setEndGameReady(world.endGameReady);
+    perception.setAllTasksDone(world.allAutonomousTasksDone);
+}
+
+const WorldState& RobotCore::worldState() const
+{
+    return perception.state();
+}
+
+String RobotCore::colorName() const
+{
+    return String(Perception::colorName(perception.state().targetColor));
+}
+
+String RobotCore::phaseName() const
 {
     return decisionEngine.phaseName();
 }
