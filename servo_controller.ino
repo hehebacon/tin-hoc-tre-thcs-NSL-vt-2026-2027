@@ -10,6 +10,7 @@
 #include "MotionSafety.h"
 #include "HardwareStatus.h"
 #include "RobotCore.h"
+#include "RobotWebServer.h"
 
 MotionController motionController;
 PCA9685ServoDriver pca9685;
@@ -19,6 +20,7 @@ CameraInterface camera;
 ThermalInterface thermal;
 MotionSafety motionSafety;
 RobotCore robotCore(motionController, motionSafety, imu, environmental, camera, thermal);
+RobotWebServer webServer(robotCore, motionController, motionSafety);
 
 String serialBuffer;
 bool safetyStopLatched = false;
@@ -524,6 +526,8 @@ void setup()
     thermal.begin();
     motionSafety.begin();
     robotCore.begin();
+    webServer.begin();
+    Serial.printf("[WIFI] AP ready: XZORT-RESCUE / IP %s\n", webServer.ip().c_str());
 
     lastMotionMs = millis();
 
@@ -535,6 +539,7 @@ void setup()
 
 void loop()
 {
+    webServer.update();
     emitTelemetry();
 
     if (motionSafety.timedOut() && !safetyStopLatched) {
