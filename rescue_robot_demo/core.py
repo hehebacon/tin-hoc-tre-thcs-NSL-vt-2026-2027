@@ -80,7 +80,6 @@ class RescueCore:
             self.mode = mode
             self.path = []
             self.searching = mode in ("RESCUE", "OSINT")
-            self.emergency_stop = False
             self.log_event(f"MODE -> {mode}")
             return True
         return False
@@ -98,9 +97,12 @@ class RescueCore:
         self.log_event("MOTION RESUMED")
 
     def return_home(self):
-        self.emergency_stop = False
+        if self.emergency_stop:
+            self.log_event("RETURN HOME BLOCKED BY E-STOP")
+            return False
         self.path = self.pathfinder.find(self.robot, self.base)
         self.log_event("RETURN HOME REQUESTED")
+        return True
 
     def step(self):
         if self.emergency_stop:
