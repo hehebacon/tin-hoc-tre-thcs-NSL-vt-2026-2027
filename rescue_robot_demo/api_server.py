@@ -6,21 +6,43 @@ import time
 from config import MAP_W, MAP_H, BASE, VICTIM, OBSTACLES
 from core import RescueCore
 from sensors import SensorSimulator, PublicDataSimulator
+from camera import CameraSimulator
+from thermal import ThermalSimulator
+from telemetry import TelemetrySimulator
+from state_machine import StateMachine
+from mission import MissionManager
 
 core = RescueCore(MAP_W, MAP_H, OBSTACLES, BASE, VICTIM)
 sensors = SensorSimulator(VICTIM)
-public = PublicDataSimulator()
+camera = CameraSimulator(VICTIM)
+thermal = ThermalSimulator(VICTIM)
+telemetry = TelemetrySimulator(BASE)
+state_machine = StateMachine()
+mission = MissionManager()
 lock = threading.Lock()
+previous_robot = core.robot
 
 
 def snapshot():
     with lock:
+        state = state_machine.update(
+            core.mode, core.found, core.searching, core.robot == BASE
+        )
         return {
             "robot": {"x": core.robot[0], "y": core.robot[1]},
             "mode": core.mode,
+            "state": state,
             "found": core.found,
             "searching": core.searching,
+            "mission": {
+                "active": mission.active,
+                "name": mission.name,
+                "events": mission.export()[:10],
+            },
             "sensors": sensors.snapshot(),
+            "camera": camera.observe(core.robot),
+            "thermal": thermal.observe(core.robot),
+            "telemetry": telemetry.snapshot(),
             "public": public.snapshot(),
             "log": core.log[:10],
         }
@@ -45,6 +67,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
 
+    def read_json(self):
+        length = max(0, min(int(self.headers.get("Content-Length", "0")), 4096))
+        return json.loads(self.rfile.read(length) or b"{}")
+
     def do_GET(self):
         if self.path == "/api/status":
             self.send_json(snapshot())
@@ -52,23 +78,38 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"error": "not found"}, 404)
 
     def do_POST(self):
-        if self.path != "/api/mode":
-            self.send_json({"error": "not found"}, 404)
-            return
-
+        path = self.path.split("?", 1)[0]
         try:
-            length = max(0, min(int(self.headers.get("Content-Length", "0")), 4096))
-            data = json.loads(self.rfile.read(length) or b"{}")
+            data = self.read_json()
         except (ValueError, json.JSONDecodeError):
             self.send_json({"error": "invalid json"}, 400)
             return
 
-        mode = data.get("mode")
         with lock:
-            if mode not in core.MODES:
-                self.send_json({"error": "invalid mode", "modes": core.MODES}, 400)
+            if path == "/api/mode":
+                mode = data.get("mode")
+                if mode not in core.MODES:
+                    self.send_json({"error": "invalid mode", "modes": core.MODES}, 400)
+                    return
+                core.set_mode(mode)
+                mission.add("MODE_CHANGED", {"mode": mode})
+
+            elif path == "/api/mission/start":
+                mission.start(data.get("name", "SEARCH & RESCUE"))
+                core.set_mode("RESCUE")
+
+            elif path == "/api/mission/stop":
+                mission.stop()
+                core.set_mode("PATROL")
+
+            elif path == "/api/mission/reset":
+                core.reset()
+                mission.active = False
+                mission.add("MISSION_RESET")
+
+            else:
+                self.send_json({"error": "not found"}, 404)
                 return
-            core.set_mode(mode)
 
         self.send_json(snapshot())
 
@@ -77,12 +118,22 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def worker():
+    global previous_robot
     while True:
         with lock:
             sensors.update(core.robot)
             if core.mode in ("RESCUE", "AUTONOMOUS") and sensors.person_visible and core.robot == VICTIM:
                 core.report_found()
+                mission.add("PERSON_DETECTED", {"position": list(VICTIM)})
+
             core.step()
+            telemetry.update(core.robot, previous_robot)
+            previous_robot = core.robot
+
+            if core.found and core.robot == BASE and mission.active:
+                mission.add("MISSION_COMPLETE")
+                mission.active = False
+
         time.sleep(0.5)
 
 
