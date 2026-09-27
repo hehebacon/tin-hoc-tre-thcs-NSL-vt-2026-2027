@@ -26,10 +26,12 @@ class Pathfinder:
             _, current = heappop(frontier)
             if current == goal:
                 break
+
             for dx, dy in DIRS:
                 nxt = (current[0] + dx, current[1] + dy)
                 if not self.valid(nxt):
                     continue
+
                 new_cost = cost[current] + 1
                 if nxt not in cost or new_cost < cost[nxt]:
                     cost[nxt] = new_cost
@@ -60,6 +62,7 @@ class RescueCore:
         self.path = []
         self.found = False
         self.searching = False
+        self.emergency_stop = False
         self.patrol_points = [
             base, (base[0] + 4, base[1]),
             (base[0] + 4, base[1] + 5), (base[0], base[1] + 5)
@@ -77,12 +80,32 @@ class RescueCore:
             self.mode = mode
             self.path = []
             self.searching = mode in ("RESCUE", "OSINT")
+            self.emergency_stop = False
             self.log_event(f"MODE -> {mode}")
+            return True
+        return False
 
     def set_target(self, target):
         self.path = self.pathfinder.find(self.robot, target)
 
+    def stop(self):
+        self.emergency_stop = True
+        self.path = []
+        self.log_event("EMERGENCY STOP")
+
+    def resume(self):
+        self.emergency_stop = False
+        self.log_event("MOTION RESUMED")
+
+    def return_home(self):
+        self.emergency_stop = False
+        self.path = self.pathfinder.find(self.robot, self.base)
+        self.log_event("RETURN HOME REQUESTED")
+
     def step(self):
+        if self.emergency_stop:
+            return
+
         if self.mode == "PATROL":
             target = self.patrol_points[self.patrol_index]
             if self.robot == target:
@@ -94,6 +117,7 @@ class RescueCore:
 
         elif self.mode == "RESCUE":
             if self.found:
+                self.searching = False
                 if self.robot != self.base and not self.path:
                     self.set_target(self.base)
             else:
@@ -132,6 +156,7 @@ class RescueCore:
         self.path = []
         self.found = False
         self.searching = False
+        self.emergency_stop = False
         self.patrol_index = 0
         self.mode = "PATROL"
         self.log = ["SYSTEM RESET"]
