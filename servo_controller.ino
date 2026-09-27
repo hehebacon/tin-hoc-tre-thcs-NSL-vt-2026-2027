@@ -140,6 +140,17 @@ void emitTelemetry()
         motionController.gait().moving() ? "true" : "false",
         hardwareStatusJson(status).c_str()
     );
+
+    const RobotCoreStatus core = robotCore.status();
+    Serial.printf(
+        "{\"type\":\"core\",\"mode\":\"%s\",\"active\":%s,\"person\":%s,\"thermal\":%s,\"healthy\":%s,\"cycle\":%lu}\n",
+        robotCore.modeName().c_str(),
+        core.missionActive ? "true" : "false",
+        core.personDetected ? "true" : "false",
+        core.thermalSignature ? "true" : "false",
+        !core.fault ? "true" : "false",
+        static_cast<unsigned long>(core.cycle)
+    );
 }
 
 void printHelp()
