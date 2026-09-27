@@ -9,6 +9,7 @@ import argparse
 import json
 import sys
 import time
+import select
 
 
 ALLOWED_COMMANDS = {"STOP", "RESUME", "CENTER", "STAND"}
@@ -35,7 +36,8 @@ def run(port, baud):
             command = None
             # This loop is receive-first by design. Commands can be injected
             # later through the optional stdin mode without changing protocol.
-            if sys.stdin in select_inputs():
+            ready, _, _ = select.select([sys.stdin], [], [], 0)
+            if ready:
                 raw = sys.stdin.readline().strip().upper()
                 if raw in ALLOWED_COMMANDS:
                     packet = {"type": "command", "command": raw}
@@ -43,10 +45,6 @@ def run(port, baud):
                     print("PC ->", packet)
 
             time.sleep(0.02)
-
-
-def select_inputs():
-    return []
 
 
 if __name__ == "__main__":
