@@ -1,73 +1,68 @@
-# Rescue Robot V1
+# Rescue Robot Simulator V3
 
-Tin Hoc Tre THCS NSL Vung Tau 2026-2027 quadruped rescue-robot software platform.
+This directory contains the hardware-neutral rescue robot simulator and the
+ESP32 motion boundary.
 
-## V1 capabilities
+## What is included
 
-- 2D mission map with A* obstacle-aware navigation
-- PATROL / SEARCH & RESCUE / PUBLIC DATA / AUTONOMOUS modes
-- Mission start, stop, reset and event history
-- Emergency stop, resume and return-home commands
-- RGB camera and thermal sensing simulation
-- Temperature, humidity and pressure telemetry
-- Battery, signal, speed, heading, pitch, roll and GPS simulation
-- Web command center with realtime polling
-- Hardware adapter boundary for ESP32 integration
-- Optional serial bridge for future physical robot
-- Public/authorized-data boundary for OSINT-style functions
+- deterministic 50 ms simulator loop
+- A* navigation with terrain cost
+- alternating-diagonal quadruped gait
+- gait movesets: IDLE, WALK, SLOW_WALK, SEARCH, RESCUE
+- foot-target -> IK -> joint-angle pipeline
+- ESP32 MotionController gait execution
+- calibration remains between IK and servo output
+- E-STOP / resume path
+- telemetry and serial command protocol
+- unit tests for navigation, gait and safety
+
+## Motion architecture
+
+Simulator:
+
+    mission/path
+        -> GaitPlanner
+        -> FootTarget
+        -> IK model
+        -> joint angles
+
+ESP32:
+
+    GaitController
+        -> FootTarget
+        -> MotionController
+        -> Kinematics
+        -> ServoCalibration
+        -> ServoManager
+        -> PCA9685
+
+The simulator is not a replacement for mechanical calibration. Before real
+servo power-up, verify every leg's direction, limits, neutral angle and physical
+clearance at low speed.
 
 ## Run
 
-    cd rescue_robot_demo
-    ./run_demo.sh
+    ./run.sh
 
-Open the dashboard at http://127.0.0.1:8080.
+## Test
 
-## Tests
+    python3 -m unittest discover -s . -p 'test_*.py'
 
-    python3 -m unittest discover -p 'test_*.py'
+## Serial gait commands
 
-## Hardware phase
+    gait WALK
+    gait SLOW_WALK
+    gait SEARCH
+    gait RESCUE
+    stop
+    resume
 
-V1 is deliberately hardware-independent. The physical phase replaces simulated providers with ESP32, servo/PCA9685, IMU, environmental, RGB and thermal drivers while preserving the Robot OS API contract.
+JSON command example:
 
-See V1_ARCHITECTURE.md and ESP32_BRIDGE.md.
+    {"command":"GAIT","mode":"WALK"}
 
+## Safety
 
-## V2 implementation status
-
-The V2 stack now contains:
-
-- hardware-neutral ESP32 interfaces for PCA9685, IMU, environmental sensing, camera, thermal and network transport
-- local firmware E-STOP and motion timeout gate
-- conservative firmware IK target envelope
-- newline-delimited JSON telemetry/command protocol
-- optional Python ESP32 telemetry link
-- optional PC serial bridge
-- simulation-first gait and mission stack
-- dashboard/API safety controls
-
-### Hardware activation status
-
-Physical outputs remain disabled by default. The PCA9685 adapter uses `ENABLE_PCA9685 0`.
-
-Do not treat simulated coordinates or joint angles as mechanically safe. Before enabling physical servos, verify the exact servo model, supply, wiring, mechanical travel, calibration and an accessible physical power cutoff.
-
-See `../WIRING_PLAN.md` and `HARDWARE_V2.md` for the staged bring-up process.
-
-
-## Competition-oriented V3 additions
-
-The simulation stack now also includes:
-
-- reusable TaskEngine for competition task profiles
-- DecisionEngine between perception, mission and motion
-- simulation-side body stabilization model
-- task progress exposed through the API
-- gait phase telemetry for FL/FR/RL/RR
-- animated quadruped movement on the command-center map
-- animated SWING/STANCE moveset cards
-- autonomous decision state shown in the dashboard
-
-The physical robot still requires staged integration and calibration. Simulation
-stabilization is not a claim of real-world mechanical stability.
+Never treat simulator reachability as proof that a physical pose is safe.
+Mechanical limits, power/current limits and calibration must be verified on the
+real robot.
