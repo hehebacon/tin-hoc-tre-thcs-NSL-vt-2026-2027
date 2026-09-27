@@ -283,7 +283,7 @@ void processCommand(String command)
 
     Serial.printf("[CMD] %s\n", command.c_str());
 
-    if (command == "perception_color ") {
+    if (command == "comp_autonomous") {
         robotCore.startAutonomous();
         Serial.println("[COMP] AUTONOMOUS started");
         return;
@@ -315,7 +315,7 @@ void processCommand(String command)
             perceptionInput.targetColor.confidence = confidence;
             perceptionInput.targetColor.valid = true;
             robotCore.setPerceptionInput(perceptionInput);
-            Serial.printf("[PERCEPTION] color=%s confidence=%.2f\\n",
+            Serial.printf("[PERCEPTION] color=%s confidence=%.2f\n",
                           Perception::colorName(perceptionInput.targetColor.color),
                           confidence);
         }
@@ -327,7 +327,7 @@ void processCommand(String command)
         value.trim();
         perceptionInput.line = Perception::parseLine(value);
         robotCore.setPerceptionInput(perceptionInput);
-        Serial.printf("[PERCEPTION] line=%s\\n", Perception::lineName(perceptionInput.line));
+        Serial.printf("[PERCEPTION] line=%s\n", Perception::lineName(perceptionInput.line));
         return;
     }
 
@@ -362,7 +362,7 @@ void processCommand(String command)
 
     if (command == "perception_status") {
         const WorldState& w = robotCore.worldState();
-        Serial.printf("[PERCEPTION] line=%s color=%s conf=%.2f target=%s picked=%s placed=%s obstacle=%s home=%s\\n",
+        Serial.printf("[PERCEPTION] line=%s color=%s conf=%.2f target=%s picked=%s placed=%s obstacle=%s home=%s\n",
             Perception::lineName(w.line), Perception::colorName(w.targetColor.color), w.targetColor.confidence,
             w.targetDetected?"true":"false", w.targetPicked?"true":"false", w.targetPlaced?"true":"false",
             w.obstacleDetected?"true":"false", w.homeDetected?"true":"false");
