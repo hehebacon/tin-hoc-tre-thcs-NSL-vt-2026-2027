@@ -1,4 +1,5 @@
 #include "RobotCore.h"
+#include <math.h>
 
 RobotCore::RobotCore(
     MotionController& motion,
