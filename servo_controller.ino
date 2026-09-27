@@ -9,6 +9,7 @@
 #include "ThermalInterface.h"
 #include "MotionSafety.h"
 #include "HardwareStatus.h"
+#include "RobotCore.h"
 
 MotionController motionController;
 PCA9685ServoDriver pca9685;
@@ -17,6 +18,7 @@ EnvironmentalSensors environmental;
 CameraInterface camera;
 ThermalInterface thermal;
 MotionSafety motionSafety;
+RobotCore robotCore(motionController, motionSafety, imu, environmental, camera, thermal);
 
 String serialBuffer;
 bool safetyStopLatched = false;
@@ -166,6 +168,8 @@ void printHelp()
     Serial.println();
     Serial.println("GAIT");
     Serial.println("  gait <WALK|SLOW_WALK|SEARCH|RESCUE>");
+    Serial.println("  mission <IDLE|PATROL|SEARCH|RESCUE|RETURN_HOME>");
+    Serial.println("  found | home | mission_status | reset_mission");
     Serial.println("================================================");
     Serial.println();
 }
@@ -191,6 +195,51 @@ void processCommand(String command)
 
     if (command == "status") {
         motionController.status();
+        return;
+    }
+
+    if (command == "mission_status") {
+        const RobotCoreStatus state = robotCore.status();
+        Serial.printf(
+            "[CORE] mode=%s active=%s person=%s thermal=%s healthy=%s cycle=%lu\\n",
+            robotCore.modeName().c_str(),
+            state.missionActive ? "true" : "false",
+            state.personDetected ? "true" : "false",
+            state.thermalSignature ? "true" : "false",
+            !state.fault ? "true" : "false",
+            static_cast<unsigned long>(state.cycle)
+        );
+        return;
+    }
+
+    if (command == "reset_mission") {
+        robotCore.resetMission();
+        Serial.println("[CORE] mission reset");
+        return;
+    }
+
+    if (command == "found") {
+        if (robotCore.reportPerson())
+            Serial.println("[CORE] person detected -> RESCUE");
+        else
+            Serial.println("[CORE] person report rejected");
+        return;
+    }
+
+    if (command == "home") {
+        robotCore.returnHome();
+        Serial.println("[CORE] RETURN_HOME requested");
+        return;
+    }
+
+    if (command.startsWith("mission ")) {
+        String mode = command.substring(8);
+        mode.trim();
+        if (robotCore.setMode(mode)) {
+            Serial.printf("[CORE] mode -> %s\\n", robotCore.modeName().c_str());
+        } else {
+            Serial.println("[CORE] mission mode rejected");
+        }
         return;
     }
 
@@ -347,6 +396,7 @@ void setup()
     camera.begin();
     thermal.begin();
     motionSafety.begin();
+    robotCore.begin();
 
     lastMotionMs = millis();
 
@@ -363,7 +413,8 @@ void loop()
         safetyStopLatched = true;
         motionSafety.emergencyStop();
         motionController.disable();
-        Serial.println("{"type":"safety","event":"MOTION_TIMEOUT"}");
+        robotCore.stop();
+        Serial.println("{\"type\":\"safety\",\"event\":\"MOTION_TIMEOUT\"}");
     }
 
     const unsigned long now = millis();
@@ -377,7 +428,7 @@ void loop()
             static_cast<float>(now - lastMotionMs) / 1000.0f;
 
         lastMotionMs = now;
-        motionController.update(dt);
+        robotCore.update(dt);
     }
 
     while (Serial.available()) {
