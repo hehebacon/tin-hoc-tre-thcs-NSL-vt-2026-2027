@@ -1,27 +1,37 @@
 # ESP32 Bridge
 
-V1 keeps the transport boundary separate from the Robot OS.
+The Python Robot OS talks to the ESP32 through a newline-delimited JSON
+boundary. The ESP32 is the authoritative safety boundary for physical motion.
 
-## Serial packet format
+## PC -> ESP32
 
-ESP32 -> PC:
-
-    {"type":"telemetry","battery":94.2,"mode":"PATROL","state":"PATROLLING"}
-
-PC -> ESP32:
+Safety:
 
     {"type":"command","command":"STOP"}
+    {"type":"command","command":"RESUME"}
 
-Supported safety commands:
-- STOP
-- RESUME
-- RETURN_HOME
-- CENTER
-- STAND
+Pose:
 
-The ESP32 firmware also emits a periodic telemetry packet and keeps a local E-STOP latch. The Python side must treat the ESP32 safety state as authoritative for physical motion.
+    {"type":"pose","leg":"FL","x":80,"y":45,"z":-90}
 
-The Python bridge is optional. The simulator and dashboard work without an ESP32.
+Gait:
+
+    {"type":"command","command":"GAIT","mode":"WALK"}
+
+Supported gait modes:
+
+- WALK
+- SLOW_WALK
+- SEARCH
+- RESCUE
+
+## ESP32 -> PC
+
+Telemetry contains firmware, E-STOP state, gait mode, gait phase, movement
+state and hardware status.
+
+The Python side must treat an active E-STOP or safety timeout as authoritative
+and must never assume that a simulator command means the physical robot moved.
 
 ## Hardware integration order
 
