@@ -19,7 +19,7 @@ async function mode(m){try{await post("/api/mode",{mode:m})}catch(e){offline()}}
 function render(d){
  connection.textContent="ONLINE";connection.className="badge online";modeLabel.textContent=d.mode;
  robot.style.left=d.robot.x*S+"px";robot.style.top=d.robot.y*S+"px";
- pathLayer.innerHTML=(d.path||[]).map(p=>{const e=document.createElement("div");e.className="path-dot";e.style.left=p[0]*S+10+"px";e.style.top=p[1]*S+10+"px";pathLayer.appendChild(e);return ""}).join("");
+ pathLayer.innerHTML="";(d.path||[]).forEach(p=>{const e=document.createElement("div");e.className="path-dot";e.style.left=p[0]*S+10+"px";e.style.top=p[1]*S+10+"px";pathLayer.appendChild(e)});
  setText("battery",d.telemetry.battery+"%");setText("signal",d.telemetry.signal+"%");
  setText("speed",d.telemetry.speed);setText("heading",d.telemetry.heading+"°");
  setText("pitch",d.telemetry.pitch+"°");setText("roll",d.telemetry.roll+"°");setText("gps",d.telemetry.gps.lat+", "+d.telemetry.gps.lon);setText("state",d.state);
