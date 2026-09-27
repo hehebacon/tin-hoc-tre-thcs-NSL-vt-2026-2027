@@ -33,6 +33,7 @@ struct WorldState {
     float obstacleDistanceCm = -1.0f;
     bool targetDetected = false;
     bool targetPicked = false;
+    bool targetClassified = false;
     bool targetPlaced = false;
     ColorObservation targetColor{};
     bool homeDetected = false;
@@ -50,6 +51,7 @@ public:
     void setObstacle(bool detected, float distanceCm = -1.0f);
     void setTarget(bool detected);
     void setTargetPicked(bool value);
+    void setTargetClassified(bool value);
     void setTargetPlaced(bool value);
     void setColor(DetectedColor color, float confidence, bool valid = true);
     void setHome(bool value);
