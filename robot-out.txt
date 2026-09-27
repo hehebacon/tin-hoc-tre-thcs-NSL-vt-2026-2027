@@ -1,0 +1,266 @@
+===============================================================
+              XZORT RESCUE QUADRUPED — 80cm
+                    CONCEPT / FRONT VIEW
+===============================================================
+
+                         ┌───────────────┐
+                         │   THERMAL     │
+                         │      ●        │
+                         │    CAMERA     │
+                         │      ●        │
+                         └───────┬───────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    │                         │
+                    │       TOP DISPLAY       │
+                    │      ┌────────────┐      │
+                    │      │ RESCUE OS  │      │
+                    │      │ SEARCH     │      │
+                    │      │ BAT 82%    │      │
+                    │      └────────────┘      │
+                    │                         │
+                    │      ROBOT BODY         │
+                    │   ┌─────────────────┐   │
+                    │   │ ESP32 / POWER   │   │
+                    │   │ PCA9685 / IMU   │   │
+                    │   └─────────────────┘   │
+                    └─────────────────────────┘
+                       ╱                 ╲
+                      ╱                   ╲
+                 ┌───●                     ●───┐
+                 │ FL                      FR │
+                 │                           │
+                 │                           │
+              ┌──●──┐                     ┌──●──┐
+              │ S1  │                     │ S4  │
+              └──┬──┘                     └──┬──┘
+                 │                            │
+                 │ FEMUR                      │ FEMUR
+                 │                            │
+              ┌──●──┐                     ┌──●──┐
+              │ S2  │                     │ S5  │
+              └──┬──┘                     └──┬──┘
+                 ╲                            ╱
+                  ╲                          ╱
+                   ╲                        ╱
+                  ┌─●─┐                  ┌─●─┐
+                  │S3 │                  │S6 │
+                  └─┬─┘                  └─┬─┘
+                    │                       │
+                   FOOT                    FOOT
+
+
+                     REAR LEGS
+                       RL       RR
+                       │         │
+                    ┌──●──┐   ┌──●──┐
+                    │     │   │     │
+                    │     │   │     │
+                    └──┬──┘   └──┬──┘
+                       │           │
+                       ●           ●
+                       │           │
+                      FOOT        FOOT
+
+
+===============================================================
+                         TOP VIEW
+===============================================================
+
+                         FRONT
+                           ↑
+                    ┌─────────────┐
+                    │   THERMAL   │
+                    │    CAMERA   │
+                    └──────┬──────┘
+                           │
+             FL            │             FR
+          ╲                │                ╱
+           ╲      ┌───────────────┐        ╱
+            ●─────│               │───────●
+            │     │    DISPLAY    │       │
+            │     │               │       │
+            │     │   MAIN BODY   │       │
+            ●─────│               │───────●
+           ╱      └───────────────┘        ╲
+          ╱                                  ╲
+        RL                                    RR
+        ●                                      ●
+        │                                      │
+        │                                      │
+        ●                                      ●
+
+                           ↓
+                         REAR
+
+Overall robot length: ~80 cm
+Overall width: ~55–65 cm
+Body: compact, low center of gravity
+Legs: 4 × 3 DOF
+Total servos: 12
+===============================================================
+
+
+===============================================================
+                    SINGLE LEG — SIDE VIEW
+===============================================================
+
+                         BODY
+              ───────────────────────
+                       │
+                       │
+                    [COXA]
+                     SERVO
+                       ●
+                       │
+                       │  FEMUR
+                       │
+                       └───────────────●
+                                       \
+                                        \
+                                         \ TIBIA
+                                          \
+                                           \
+                                            ●
+                                           FOOT
+
+
+               STABLE POSTURE
+
+                    BODY
+              ─────────────────
+                       ●
+                       │
+                       │
+                       ●
+                        \
+                         \
+                          ●
+                         FOOT
+
+
+               WALK POSTURE
+
+                    BODY
+              ─────────────────
+                       ●
+                       │
+                       │
+                       └──────────●
+                                   \
+                                    \
+                                     ●
+                                    FOOT
+
+          Knee/femur-tibia geometry opens wider
+          during walking for a longer stride.
+
+
+===============================================================
+                    3 DOF PER LEG
+===============================================================
+
+              BODY
+                │
+                ▼
+          ┌──────────┐
+          │ COXA     │  ← horizontal rotation
+          └────┬─────┘
+               │
+               ▼
+          ┌──────────┐
+          │ FEMUR    │  ← vertical/outward movement
+          └────┬─────┘
+               │
+               ▼
+          ┌──────────┐
+          │ TIBIA    │  ← knee/foot extension
+          └────┬─────┘
+               │
+               ▼
+             FOOT
+
+
+===============================================================
+                    FRONT SENSOR MODULE
+===============================================================
+
+                 ┌─────────────────┐
+                 │   THERMAL ●     │
+                 │                 │
+                 │    CAMERA ●     │
+                 │                 │
+                 │ ●             ● │
+                 │  DISTANCE       │
+                 └─────────────────┘
+
+       LED ──●                       ●── LED
+
+
+===============================================================
+                    MAIN COMPONENTS
+===============================================================
+
+BODY
+ ├── ESP32
+ ├── PCA9685
+ ├── 3.5" Touch Display
+ ├── Battery
+ ├── Servo Power BEC
+ ├── Logic Buck
+ ├── IMU
+ ├── BME280
+ └── E-STOP
+
+FRONT
+ ├── Camera
+ ├── Thermal sensor/camera
+ ├── Distance sensors
+ └── LED
+
+LEGS
+ ├── FL = Servo 0,1,2
+ ├── FR = Servo 3,4,5
+ ├── RL = Servo 6,7,8
+ └── RR = Servo 9,10,11
+
+MECHANICAL
+ ├── Metal servo horns
+ ├── Steel shafts
+ ├── Bearings
+ ├── Aluminum load-bearing frame
+ └── PETG/nylon 3D-printed outer shell
+
+
+===============================================================
+                       DESIGN LANGUAGE
+===============================================================
+
+Shape:
+    futuristic rescue robot / robotic dog / spider-like
+    compact body
+    four articulated legs
+    aggressive but friendly engineering appearance
+
+Colors:
+    BLACK       = main body
+    BLUE        = accents / status lighting
+    WHITE       = labels / small details
+
+Materials:
+    aluminum internal frame
+    PETG/nylon outer shell
+    metal joints / shafts / servo horns
+
+Important:
+    DO NOT make the legs look like simple V-shaped sticks.
+    Each leg has a real 3-joint quadruped structure:
+        COXA → FEMUR → TIBIA → FOOT
+
+    The body should be relatively low and compact.
+    The four legs extend from the four corners of the body.
+    Front sensor module sits at the front.
+    Touchscreen sits on the top of the body.
+    Robot should look like a serious search-and-rescue prototype,
+    not a toy.
+===============================================================
