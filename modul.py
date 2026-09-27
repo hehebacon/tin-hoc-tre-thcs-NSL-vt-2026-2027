@@ -82,20 +82,144 @@ def hip_bracket():
     return part.cut(pivot)
 
 def thigh_link():
- ln=P["thigh_length"]; bw=34.; bh=22.; part=Box(bw,ln,bh,align=(Align.CENTER,Align.CENTER,Align.MIN))
- for y in (0,ln): part=part.fuse(Cylinder(19,bw,rotation=(0,90,0)).translate((0,y,bh/2)))
- part=part.fuse(Cone(13,4,8,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,ln*.5,bh)))
- for y in (ln*.25,ln*.5,ln*.75): part=part.fuse(Box(40,6,3.5,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,y,bh)))
- for y in (0,ln): part=part.cut(Cylinder(PIVOT_R,bw+8,rotation=(0,90,0)).translate((0,y,bh/2)))
- for y in (12,ln-12): part=part.cut(Cylinder(P["fastener_head"]/2,P["fastener_depth"]).translate((0,y,bh-1.4)))
- return part
+    """Angular spider-style upper leg.
+
+    The silhouette uses straight rectangular arms and a hard 90-degree
+    offset instead of a round rod. Servo/pivot bores remain mechanical.
+    """
+    ln = P["thigh_length"]
+    bw = 30.0
+    bh = 24.0
+    arm = 24.0
+    joint_r = 18.0
+
+    part = Box(
+        bw, ln * 0.72, bh,
+        align=(Align.CENTER, Align.CENTER, Align.MIN)
+    )
+
+    # Square rear shoulder / pivot block.
+    part = part.fuse(
+        Box(bw + 10, 34, bh + 4,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, -17, -2))
+    )
+
+    # Main straight section.
+    part = part.fuse(
+        Box(bw, ln * 0.42, bh,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, ln * 0.58, 0))
+    )
+
+    # Hard 90-degree spider bend.
+    part = part.fuse(
+        Box(bw, arm, bh + 10,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, ln * 0.68, 0))
+    )
+    part = part.fuse(
+        Box(bw + 18, arm, bh,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, ln * 0.82, 5))
+    )
+
+    # End joint housing.
+    part = part.fuse(
+        Cylinder(joint_r, bw + 8,
+                 rotation=(0, 90, 0),
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln, bh / 2))
+    )
+
+    # Light structural ribs for FDM strength.
+    for y in (ln * 0.18, ln * 0.42, ln * 0.66):
+        part = part.fuse(
+            Box(bw + 8, 5, 4,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, y, bh))
+        )
+
+    # Pivot holes at both ends.
+    for y in (0, ln):
+        part = part.cut(
+            Cylinder(
+                PIVOT_R, bw + 12,
+                rotation=(0, 90, 0),
+                align=(Align.CENTER, Align.CENTER, Align.MIN)
+            ).translate((0, y, bh / 2))
+        )
+
+    return part
+
 
 def knee_shin():
- ln=P["shin_length"]; part=Cone(12,19,ln,align=(Align.CENTER,Align.CENTER,Align.MIN))
- part=part.fuse(Box(5,30,ln*.55,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,0,ln*.2)))
- part=part.fuse(Cylinder(22,28,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,0,ln-25)))
- part=part.cut(Cylinder(PIVOT_R,48,rotation=(0,90,0)).translate((0,0,ln-11)))
- return part.fuse(Cylinder(P["foot_diameter"]/2,P["foot_thickness"],align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,0,-P["foot_thickness"])))
+    """Angular lower leg with the characteristic compact spider bend."""
+    ln = P["shin_length"]
+    bw = 28.0
+    bh = 22.0
+    joint_r = 18.0
+
+    # Upper vertical-ish section.
+    part = Box(
+        bw, ln * 0.48, bh,
+        align=(Align.CENTER, Align.CENTER, Align.MIN)
+    )
+
+    # 90-degree knee offset.
+    part = part.fuse(
+        Box(bw + 12, 30, bh + 8,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln * 0.42, 0))
+    )
+    part = part.fuse(
+        Box(bw, ln * 0.50, bh,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln * 0.50, 0))
+    )
+
+    # Lower foot section is deliberately offset for the spider silhouette.
+    part = part.fuse(
+        Box(bw + 14, 34, bh,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln * 0.80, 0))
+    )
+
+    # Knee/end joint bosses.
+    for y in (0, ln):
+        part = part.fuse(
+            Cylinder(
+                joint_r, bw + 8,
+                rotation=(0, 90, 0),
+                align=(Align.CENTER, Align.CENTER, Align.MIN)
+            ).translate((0, y, bh / 2))
+        )
+
+    # Pivot bores.
+    for y in (0, ln):
+        part = part.cut(
+            Cylinder(
+                PIVOT_R, bw + 12,
+                rotation=(0, 90, 0),
+                align=(Align.CENTER, Align.CENTER, Align.MIN)
+            ).translate((0, y, bh / 2))
+        )
+
+    # Flat rescue foot.
+    foot = Box(
+        42, 52, P["foot_thickness"],
+        align=(Align.CENTER, Align.CENTER, Align.MIN)
+    ).translate((0, ln * 0.91, -P["foot_thickness"]))
+    foot = foot.fuse(
+        Cylinder(
+            P["foot_diameter"] / 2,
+            P["foot_thickness"],
+            align=(Align.CENTER, Align.CENTER, Align.MIN)
+        ).translate((0, ln * 0.91, -P["foot_thickness"]))
+    )
+
+    return part.fuse(foot)
+
 
 def body_shell():
  bl,bw,bh=P["body_length"],P["body_width"],P["body_height"]; part=Box(bw,bl,bh,align=(Align.CENTER,Align.CENTER,Align.MIN))
