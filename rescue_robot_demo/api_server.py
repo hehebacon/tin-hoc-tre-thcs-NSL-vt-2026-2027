@@ -28,11 +28,24 @@ lock = threading.RLock()
 previous_robot = core.robot
 
 
+def fused_perception():
+    rgb = camera.observe(core.robot)
+    ir = thermal.observe(core.robot)
+    agreement = rgb["person_detected"] and ir["hotspot_detected"]
+    score = round((rgb["confidence"] + ir["intensity"]) / 2.0, 2)
+    return {
+        "person_confirmed": agreement and score >= 0.45,
+        "confidence": score,
+        "rgb": rgb,
+        "thermal": ir,
+        "fusion_rule": "RGB + THERMAL",
+    }
+
+
 def snapshot():
     with lock:
-        state = state_machine.update(
-            core.mode, core.found, core.searching, core.robot == BASE
-        )
+        state = state_machine.update(core.mode, core.found, core.searching, core.robot == BASE)
+        perception = fused_perception()
         return {
             "robot": {"x": core.robot[0], "y": core.robot[1]},
             "mode": core.mode,
@@ -40,16 +53,13 @@ def snapshot():
             "emergency_stop": core.emergency_stop,
             "safety": safety.snapshot(),
             "gait": gait.snapshot(moving=bool(core.path), dt=0.0),
+            "terrain": core.terrain_at(),
+            "path": [list(p) for p in core.path[:20]],
             "found": core.found,
             "searching": core.searching,
-            "mission": {
-                "active": mission.active,
-                "name": mission.name,
-                "events": mission.export()[:10],
-            },
+            "perception": perception,
+            "mission": {"active": mission.active, "name": mission.name, "events": mission.export()[:10]},
             "sensors": sensors.snapshot(),
-            "camera": camera.observe(core.robot),
-            "thermal": thermal.observe(core.robot),
             "telemetry": telemetry.snapshot(),
             "public": public.snapshot(),
             "log": core.log[:10],
@@ -92,88 +102,56 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, json.JSONDecodeError):
             self.send_json({"error": "invalid json"}, 400)
             return
-
         with lock:
             if path == "/api/safety":
                 action = str(data.get("action", "")).upper()
                 if action == "STOP":
-                    safety.stop("operator")
-                    core.stop()
-                    mission.add("EMERGENCY_STOP")
+                    safety.stop("operator"); core.stop(); mission.add("EMERGENCY_STOP")
                 elif action == "RESUME":
                     result = safety.resume(telemetry.battery)
                     if not result["ok"]:
-                        self.send_json({"error": result["reason"]}, 409)
-                        return
-                    core.resume()
-                    mission.add("MOTION_RESUMED")
+                        self.send_json({"error": result["reason"]}, 409); return
+                    core.resume(); mission.add("MOTION_RESUMED")
                 else:
-                    self.send_json({"error": "invalid safety action", "actions": ["STOP", "RESUME"]}, 400)
-                    return
-
+                    self.send_json({"error": "invalid safety action", "actions": ["STOP", "RESUME"]}, 400); return
             elif path == "/api/mode":
                 allowed, reason = safety.allow_motion(telemetry.battery)
                 if not allowed:
-                    self.send_json({"error": reason}, 409)
-                    return
+                    self.send_json({"error": reason}, 409); return
                 mode = data.get("mode")
                 if not core.set_mode(mode):
-                    self.send_json({"error": "invalid mode", "modes": core.MODES}, 400)
-                    return
+                    self.send_json({"error": "invalid mode", "modes": core.MODES}, 400); return
+                if mode == "OSINT":
+                    public.scan()
                 mission.add("MODE_CHANGED", {"mode": mode})
-
             elif path == "/api/mission/start":
                 allowed, reason = safety.allow_motion(telemetry.battery)
                 if not allowed:
-                    self.send_json({"error": reason}, 409)
-                    return
-                mission.start(data.get("name", "SEARCH & RESCUE"))
-                core.set_mode("RESCUE")
-
+                    self.send_json({"error": reason}, 409); return
+                mission.start(data.get("name", "SEARCH & RESCUE")); core.set_mode("RESCUE")
+                mission.add("SEARCH_STARTED", {"pipeline": "RGB+THERMAL+NAV"})
             elif path == "/api/mission/stop":
-                mission.stop()
-                safety.stop("mission_stop")
-                core.stop()
-
+                mission.stop(); safety.stop("mission_stop"); core.stop()
             elif path == "/api/mission/reset":
-                core.reset()
-                safety.resume(telemetry.battery)
-                mission.active = False
-                mission.add("MISSION_RESET")
-
+                core.reset(); safety.resume(telemetry.battery); mission.active = False; mission.add("MISSION_RESET")
             elif path == "/api/command":
                 command = str(data.get("command", "")).upper()
                 if command == "STOP":
-                    safety.stop("operator")
-                    core.stop()
-                    mission.add("EMERGENCY_STOP")
+                    safety.stop("operator"); core.stop(); mission.add("EMERGENCY_STOP")
                 elif command == "RESUME":
                     result = safety.resume(telemetry.battery)
                     if not result["ok"]:
-                        self.send_json({"error": result["reason"]}, 409)
-                        return
-                    core.resume()
-                    mission.add("MOTION_RESUMED")
+                        self.send_json({"error": result["reason"]}, 409); return
+                    core.resume(); mission.add("MOTION_RESUMED")
                 elif command == "RETURN_HOME":
                     allowed, reason = safety.allow_motion(telemetry.battery)
-                    if not allowed:
-                        self.send_json({"error": reason}, 409)
-                        return
-                    if not core.return_home():
-                        self.send_json({"error": "return home blocked"}, 409)
-                        return
+                    if not allowed or not core.return_home():
+                        self.send_json({"error": reason if not allowed else "return home blocked"}, 409); return
                     mission.add("RETURN_HOME")
                 else:
-                    self.send_json({
-                        "error": "invalid command",
-                        "commands": ["STOP", "RESUME", "RETURN_HOME"]
-                    }, 400)
-                    return
-
+                    self.send_json({"error": "invalid command", "commands": ["STOP", "RESUME", "RETURN_HOME"]}, 400); return
             else:
-                self.send_json({"error": "not found"}, 404)
-                return
-
+                self.send_json({"error": "not found"}, 404); return
         self.send_json(snapshot())
 
     def log_message(self, *_):
@@ -185,27 +163,28 @@ def worker():
     while True:
         with lock:
             sensors.update(core.robot)
-
+            perception = fused_perception()
             detected_now = (
                 core.mode in ("RESCUE", "AUTONOMOUS")
-                and sensors.person_visible
+                and perception["person_confirmed"]
                 and core.robot == VICTIM
                 and not core.found
             )
             if detected_now:
                 core.report_found()
-                mission.add("PERSON_DETECTED", {"position": list(VICTIM)})
-
-            allowed, _ = safety.allow_motion(telemetry.battery)
+                mission.add("PERSON_DETECTED", {"position": list(VICTIM), "confidence": perception["confidence"]})
+                mission.add("LOCATION_RECORDED", {"gps": telemetry.gps})
+            allowed, reason = safety.allow_motion(telemetry.battery)
             if allowed:
                 core.step()
+            elif reason == "LOW_BATTERY":
+                core.stop()
             telemetry.update(core.robot, previous_robot)
             previous_robot = core.robot
-
+            gait.update(moving=bool(core.path), dt=0.5)
             if core.found and core.robot == BASE and mission.active:
                 mission.add("MISSION_COMPLETE")
                 mission.active = False
-
         time.sleep(0.5)
 
 
