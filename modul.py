@@ -30,51 +30,55 @@ def export_print(part,name):
 def export_master(part,name): export_step(part,os.path.join(CAD_OUT,name+".step"))
 
 def hip_bracket():
-    # OCC-stable version: only intersecting primitives and simple booleans.
-    # Fastener recesses are intentionally omitted here; the through holes are
-    # the manufacturing datum and can be counterbored in the final CAD pass.
-    ow = W + 2*WALL + 4
-    ol = L + 2*WALL + 4
+    """OCC-stable servo hip housing.
+
+    Uses only robust overlapping solids and through-holes. Counterbores are
+    intentionally deferred to the final manufacturing CAD pass because they
+    can create Null TopoDS_Shape on some build123d/OCC combinations.
+    """
+    ow = W + 2 * WALL + 4
+    ol = L + 2 * WALL + 4
     oh = H + WALL
 
     outer = Box(ow, ol, oh, align=(Align.CENTER, Align.CENTER, Align.MIN))
     cavity = Box(
-        W + 2*CLR, L + 2*CLR, H + 2,
+        W + 2 * CLR, L + 2 * CLR, H + 2,
         align=(Align.CENTER, Align.CENTER, Align.MIN)
     ).translate((0, 0, -0.5))
     part = outer.cut(cavity)
 
-    # Side reinforcement pads overlap the housing by 4 mm.
-    pad_x = ow/2 - 8
+    # Reinforcement pads overlap the housing.
+    pad_x = ow / 2 - 8
     for x in (-pad_x, pad_x):
         part = part.fuse(
             Cylinder(
                 12, 8,
                 align=(Align.CENTER, Align.CENTER, Align.MIN)
-            ).translate((x, -ol*0.15, oh*0.25))
+            ).translate((x, -ol * 0.15, oh * 0.25))
         )
 
     # Two full-depth M3 mounting holes.
-    for x in (-ow*0.30, ow*0.30):
+    for x in (-ow * 0.30, ow * 0.30):
         hole = Cylinder(
             M3_R, oh + 2,
             align=(Align.CENTER, Align.CENTER, Align.MIN)
-        ).translate((x, ol*0.18, -0.5))
+        ).translate((x, ol * 0.18, -0.5))
         part = part.cut(hole)
 
-    # Pivot boss deliberately overlaps the front wall.
+    # Pivot boss overlaps the front wall.
     boss = Cylinder(
         16, 12,
         rotation=(0, 90, 0),
         align=(Align.CENTER, Align.CENTER, Align.MIN)
-    ).translate((-6, 0, oh*0.5))
+    ).translate((-6, 0, oh * 0.5))
     part = part.fuse(boss)
 
     pivot = Cylinder(
         PIVOT_R, 24,
         rotation=(0, 90, 0),
         align=(Align.CENTER, Align.CENTER, Align.MIN)
-    ).translate((-12, 0, oh*0.5))
+    ).translate((-12, 0, oh * 0.5))
+
     return part.cut(pivot)
 
 def thigh_link():
