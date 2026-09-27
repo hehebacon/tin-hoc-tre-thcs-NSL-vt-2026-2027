@@ -17,11 +17,7 @@ const char* const MotionController::LEG_NAMES[LEG_COUNT] = {
 };
 
 MotionController::MotionController()
-    : kinematics(
-        COXA_LENGTH,
-        FEMUR_LENGTH,
-        TIBIA_LENGTH
-    )
+    : kinematics(COXA_LENGTH, FEMUR_LENGTH, TIBIA_LENGTH)
 {
     resetLegStates();
 }
@@ -32,10 +28,31 @@ void MotionController::begin()
     servoManager.begin();
     environment.begin();
     imu.begin();
+    gaitController.reset();
     resetLegStates();
 
     Serial.println("[MOTION] Controller initialized");
     Serial.println("[MOTION] Hardware adapter initialized");
+}
+
+void MotionController::update(float dt)
+{
+    if (!gaitController.moving())
+        return;
+
+    gaitController.update(dt);
+
+    for (int i = 0; i < LEG_COUNT; ++i) {
+        const FootTarget target =
+            gaitController.target(static_cast<GaitLeg>(i));
+
+        setFootTarget(
+            static_cast<LegID>(i),
+            target.x,
+            target.y,
+            target.z
+        );
+    }
 }
 
 void MotionController::resetLegStates()
@@ -52,51 +69,30 @@ void MotionController::resetLegStates()
 int MotionController::parseLeg(const String& name) const
 {
     String normalized = name;
-
     normalized.trim();
     normalized.toUpperCase();
 
-    if (normalized == "FL")
-        return FL;
-
-    if (normalized == "FR")
-        return FR;
-
-    if (normalized == "RL")
-        return RL;
-
-    if (normalized == "RR")
-        return RR;
+    if (normalized == "FL") return FL;
+    if (normalized == "FR") return FR;
+    if (normalized == "RL") return RL;
+    if (normalized == "RR") return RR;
 
     return -1;
 }
 
-void MotionController::setServo(
-    int channel,
-    int rawAngle
-)
+void MotionController::setServo(int channel, int rawAngle)
 {
     if (!servoManager.validChannel(channel)) {
-        Serial.printf(
-            "[MOTION] Invalid servo channel: %d\n",
-            channel
-        );
+        Serial.printf("[MOTION] Invalid servo channel: %d\n", channel);
         return;
     }
 
-    const int calibratedAngle =
-        calibrator.apply(channel, rawAngle);
-
-    servoManager.setAngle(
-        channel,
-        calibratedAngle
-    );
+    const int calibratedAngle = calibrator.apply(channel, rawAngle);
+    servoManager.setAngle(channel, calibratedAngle);
 
     Serial.printf(
         "[MOTION] CH%02d raw=%d calibrated=%d\n",
-        channel,
-        rawAngle,
-        calibratedAngle
+        channel, rawAngle, calibratedAngle
     );
 }
 
@@ -107,10 +103,8 @@ bool MotionController::setLeg(
     int tibia
 )
 {
-    if (leg < 0 || leg >= LEG_COUNT) {
-        Serial.println("[MOTION] Invalid leg");
+    if (leg < 0 || leg >= LEG_COUNT)
         return false;
-    }
 
     legs[leg] = {
         static_cast<float>(coxa),
@@ -118,28 +112,9 @@ bool MotionController::setLeg(
         static_cast<float>(tibia)
     };
 
-    setServo(
-        SERVO_MAP[leg][0],
-        coxa
-    );
-
-    setServo(
-        SERVO_MAP[leg][1],
-        femur
-    );
-
-    setServo(
-        SERVO_MAP[leg][2],
-        tibia
-    );
-
-    Serial.printf(
-        "[MOTION] %s -> C:%d F:%d T:%d\n",
-        LEG_NAMES[leg],
-        coxa,
-        femur,
-        tibia
-    );
+    setServo(SERVO_MAP[leg][0], coxa);
+    setServo(SERVO_MAP[leg][1], femur);
+    setServo(SERVO_MAP[leg][2], tibia);
 
     return true;
 }
@@ -152,15 +127,8 @@ bool MotionController::setLeg(
 )
 {
     const int leg = parseLeg(name);
-
-    if (leg < 0) {
-        Serial.printf(
-            "[MOTION] Invalid leg: %s\n",
-            name.c_str()
-        );
-
+    if (leg < 0)
         return false;
-    }
 
     return setLeg(
         static_cast<LegID>(leg),
@@ -177,13 +145,78 @@ bool MotionController::solveIK(
     JointAngles& result
 ) const
 {
-    result = kinematics.solve(
-        x,
-        y,
-        z
-    );
-
+    result = kinematics.solve(x, y, z);
     return result.valid;
+}
+
+bool MotionController::validateFootTarget(
+    float x,
+    float y,
+    float z
+) const
+{
+    const float radial = sqrtf(x * x + y * y);
+
+    if (radial < 35.0f || radial > 180.0f)
+        return false;
+
+    if (z > -45.0f || z < -150.0f)
+        return false;
+
+    return true;
+}
+
+bool MotionController::setFootTarget(
+    LegID leg,
+    float x,
+    float y,
+    float z
+)
+{
+    if (leg < 0 || leg >= LEG_COUNT)
+        return false;
+
+    if (!validateFootTarget(x, y, z)) {
+        Serial.printf(
+            "[MOTION] Target rejected %s X=%.1f Y=%.1f Z=%.1f\n",
+            LEG_NAMES[leg], x, y, z
+        );
+        return false;
+    }
+
+    JointAngles result;
+
+    if (!solveIK(x, y, z, result)) {
+        Serial.printf(
+            "[IK] %s unreachable X=%.1f Y=%.1f Z=%.1f\n",
+            LEG_NAMES[leg], x, y, z
+        );
+        return false;
+    }
+
+    return setLeg(
+        leg,
+        static_cast<int>(lroundf(result.coxa)),
+        static_cast<int>(lroundf(result.femur)),
+        static_cast<int>(lroundf(result.tibia))
+    );
+}
+
+bool MotionController::setFootTarget(
+    const String& name,
+    float x,
+    float y,
+    float z
+)
+{
+    const int leg = parseLeg(name);
+    if (leg < 0)
+        return false;
+
+    return setFootTarget(
+        static_cast<LegID>(leg),
+        x, y, z
+    );
 }
 
 bool MotionController::setLegIK(
@@ -193,52 +226,7 @@ bool MotionController::setLegIK(
     float z
 )
 {
-    if (leg < 0 || leg >= LEG_COUNT) {
-        Serial.println("[IK] Invalid leg");
-        return false;
-    }
-
-    JointAngles result;
-
-    if (!solveIK(
-            x,
-            y,
-            z,
-            result
-        )) {
-
-        Serial.printf(
-            "[IK] %s unreachable: "
-            "X=%.2f Y=%.2f Z=%.2f\n",
-            LEG_NAMES[leg],
-            x,
-            y,
-            z
-        );
-
-        return false;
-    }
-
-    Serial.printf(
-        "[IK] %s -> C:%.2f F:%.2f T:%.2f\n",
-        LEG_NAMES[leg],
-        result.coxa,
-        result.femur,
-        result.tibia
-    );
-
-    return setLeg(
-        leg,
-        static_cast<int>(
-            lroundf(result.coxa)
-        ),
-        static_cast<int>(
-            lroundf(result.femur)
-        ),
-        static_cast<int>(
-            lroundf(result.tibia)
-        )
-    );
+    return setFootTarget(leg, x, y, z);
 }
 
 bool MotionController::setLegIK(
@@ -248,118 +236,65 @@ bool MotionController::setLegIK(
     float z
 )
 {
-    const int leg = parseLeg(name);
-
-    if (leg < 0) {
-        Serial.printf(
-            "[IK] Invalid leg: %s\n",
-            name.c_str()
-        );
-
-        return false;
-    }
-
-    return setLegIK(
-        static_cast<LegID>(leg),
-        x,
-        y,
-        z
-    );
+    return setFootTarget(name, x, y, z);
 }
 
-void MotionController::testIK(
-    float x,
-    float y,
-    float z
-) const
+void MotionController::testIK(float x, float y, float z) const
 {
     JointAngles result;
 
     Serial.println();
-    Serial.println(
-        "=============== IK RESULT ==============="
-    );
+    Serial.println("=============== IK RESULT ===============");
+    Serial.printf("Input X : %.2f mm\n", x);
+    Serial.printf("Input Y : %.2f mm\n", y);
+    Serial.printf("Input Z : %.2f mm\n", z);
 
-    Serial.printf(
-        "Input X : %.2f mm\n",
-        x
-    );
-
-    Serial.printf(
-        "Input Y : %.2f mm\n",
-        y
-    );
-
-    Serial.printf(
-        "Input Z : %.2f mm\n",
-        z
-    );
-
-    if (solveIK(
-            x,
-            y,
-            z,
-            result
-        )) {
-
-        Serial.printf(
-            "Coxa    : %.2f deg\n",
-            result.coxa
-        );
-
-        Serial.printf(
-            "Femur   : %.2f deg\n",
-            result.femur
-        );
-
-        Serial.printf(
-            "Tibia   : %.2f deg\n",
-            result.tibia
-        );
-
-        Serial.println(
-            "Status  : VALID"
-        );
-
+    if (solveIK(x, y, z, result)) {
+        Serial.printf("Coxa    : %.2f deg\n", result.coxa);
+        Serial.printf("Femur   : %.2f deg\n", result.femur);
+        Serial.printf("Tibia   : %.2f deg\n", result.tibia);
+        Serial.println("Status  : VALID");
     } else {
-
-        Serial.println(
-            "Status  : UNREACHABLE"
-        );
+        Serial.println("Status  : UNREACHABLE");
     }
 
-    Serial.println(
-        "=========================================="
-    );
-
+    Serial.println("==========================================");
     Serial.println();
+}
+
+void MotionController::setGait(const String& mode)
+{
+    gaitController.setMode(mode);
+    Serial.printf("[GAIT] Mode -> %s\n", gaitController.mode());
+}
+
+void MotionController::stopGait()
+{
+    gaitController.stop();
+    Serial.println("[GAIT] Stopped");
+}
+
+const GaitController& MotionController::gait() const
+{
+    return gaitController;
 }
 
 void MotionController::center()
 {
+    stopGait();
     servoManager.centerAll();
-
     resetLegStates();
-
-    Serial.println(
-        "[MOTION] Neutral pose applied"
-    );
+    Serial.println("[MOTION] Neutral pose applied");
 }
 
 void MotionController::stand()
 {
-    for (int i = 0; i < LEG_COUNT; ++i) {
-        setLeg(
-            static_cast<LegID>(i),
-            90,
-            90,
-            90
-        );
-    }
+    stopGait();
 
-    Serial.println(
-        "[MOTION] Stand pose applied"
-    );
+    for (int i = 0; i < LEG_COUNT; ++i)
+        setLeg(static_cast<LegID>(i), 90, 90, 90);
+
+    Serial.println("[MOTION] Stand pose applied");
 }
 
 void MotionController::enable()
@@ -369,42 +304,22 @@ void MotionController::enable()
 
 void MotionController::disable()
 {
+    stopGait();
     servoManager.disableAll();
 }
 
 void MotionController::status() const
 {
     Serial.println();
-    Serial.println(
-        "============== ROBOT STATUS =============="
-    );
-
-    Serial.printf(
-        "Robot    : %s\n",
-        ROBOT_NAME
-    );
-
-    Serial.printf(
-        "Firmware : %s\n",
-        FIRMWARE_VERSION
-    );
-
-    Serial.println(
-        "Mode     : SIMULATION"
-    );
-
-    Serial.println(
-        "PCA9685  : NOT CONNECTED"
-    );
-
-    Serial.println(
-        "Servos   : NOT CONNECTED"
-    );
-
+    Serial.println("============== ROBOT STATUS ==============");
+    Serial.printf("Robot    : %s\n", ROBOT_NAME);
+    Serial.printf("Firmware : %s\n", FIRMWARE_VERSION);
+    Serial.printf("Gait     : %s\n", gaitController.mode());
+    Serial.printf("Phase    : %.3f\n", gaitController.phase());
+    Serial.printf("Moving   : %s\n", gaitController.moving() ? "YES" : "NO");
     Serial.println();
 
     for (int i = 0; i < LEG_COUNT; ++i) {
-
         Serial.printf(
             "%s | C:%6.2f F:%6.2f T:%6.2f\n",
             LEG_NAMES[i],
@@ -414,72 +329,28 @@ void MotionController::status() const
         );
     }
 
-    Serial.println(
-        "=========================================="
-    );
-
+    Serial.println("==========================================");
     servoManager.status();
 }
 
 void MotionController::debug() const
 {
     Serial.println();
-    Serial.println(
-        "========== MODULE DEBUG =========="
-    );
-
-    Serial.printf(
-        "[OK] config.h              | Robot=%s\n",
-        ROBOT_NAME
-    );
-
-    Serial.printf(
-        "[OK] ServoManager          | channels=%d\n",
-        SERVO_COUNT
-    );
-
-    Serial.println(
-        "[OK] ServoCalibration"
-    );
-
-    Serial.println(
-        "[OK] Kinematics"
-    );
-
-    Serial.println(
-        "[OK] MotionController"
-    );
-
-    Serial.println(
-        "[OK] Main firmware"
-    );
-
+    Serial.println("========== MODULE DEBUG ==========");
+    Serial.printf("[OK] config.h              | Robot=%s\n", ROBOT_NAME);
+    Serial.printf("[OK] ServoManager          | channels=%d\n", SERVO_COUNT);
+    Serial.println("[OK] ServoCalibration");
+    Serial.println("[OK] Kinematics");
+    Serial.println("[OK] GaitController");
+    Serial.println("[OK] MotionController");
+    Serial.println("[OK] Main firmware");
     Serial.println();
-
-    Serial.println(
-        "[INFO] Hardware:"
-    );
-
-    Serial.println(
-        "       PCA9685 : guarded hardware adapter"
-    );
-
-    Serial.println(
-        "       Servos  : OFFLINE"
-    );
-
-    Serial.println(
-        "       Camera  : OFFLINE"
-    );
-
-    Serial.println(
-        "       Voice   : OFFLINE"
-    );
-
-    Serial.println(
-        "=================================="
-    );
-
+    Serial.println("[INFO] Hardware:");
+    Serial.println("       PCA9685 : guarded hardware adapter");
+    Serial.println("       Servos  : OFFLINE");
+    Serial.println("       Camera  : OFFLINE");
+    Serial.println("       Voice   : OFFLINE");
+    Serial.println("==================================");
     Serial.println();
 }
 
@@ -488,36 +359,20 @@ void MotionController::printCalibration() const
     calibrator.printAll();
 }
 
-void MotionController::printCalibration(
-    int channel
-) const
+void MotionController::printCalibration(int channel) const
 {
     calibrator.print(channel);
 }
 
-void MotionController::setCalibrationOffset(
-    int channel,
-    int offset
-)
+void MotionController::setCalibrationOffset(int channel, int offset)
 {
-    calibrator.setOffset(
-        channel,
-        offset
-    );
-
+    calibrator.setOffset(channel, offset);
     calibrator.print(channel);
 }
 
-void MotionController::setCalibrationInvert(
-    int channel,
-    bool invert
-)
+void MotionController::setCalibrationInvert(int channel, bool invert)
 {
-    calibrator.setInvert(
-        channel,
-        invert
-    );
-
+    calibrator.setInvert(channel, invert);
     calibrator.print(channel);
 }
 
@@ -527,38 +382,16 @@ void MotionController::setCalibrationLimits(
     int maximum
 )
 {
-    calibrator.setLimits(
-        channel,
-        minimum,
-        maximum
-    );
-
+    calibrator.setLimits(channel, minimum, maximum);
     calibrator.print(channel);
 }
 
-const LegState&
-MotionController::getLegState(
-    LegID leg
-) const
+const LegState& MotionController::getLegState(LegID leg) const
 {
-    static const LegState invalid = {
-        0.0f,
-        0.0f,
-        0.0f
-    };
+    static const LegState invalid = {0.0f, 0.0f, 0.0f};
 
     if (leg < 0 || leg >= LEG_COUNT)
         return invalid;
 
     return legs[leg];
-}
-
-bool MotionController::validateFootTarget(float x, float y, float z) const
-{
-    // Conservative software envelope only. Real mechanical limits must be
-    // calibrated for the actual frame, servo geometry and mounting.
-    const float radial = sqrtf(x * x + y * y);
-    if (radial < 35.0f || radial > 180.0f) return false;
-    if (z > -45.0f || z < -150.0f) return false;
-    return true;
 }
