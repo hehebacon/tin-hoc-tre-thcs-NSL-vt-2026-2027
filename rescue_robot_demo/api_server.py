@@ -19,7 +19,7 @@ thermal = ThermalSimulator(VICTIM)
 telemetry = TelemetrySimulator(BASE)
 state_machine = StateMachine()
 mission = MissionManager()
-lock = threading.Lock()
+lock = threading.RLock()
 previous_robot = core.robot
 
 
@@ -32,6 +32,7 @@ def snapshot():
             "robot": {"x": core.robot[0], "y": core.robot[1]},
             "mode": core.mode,
             "state": state,
+            "emergency_stop": core.emergency_stop,
             "found": core.found,
             "searching": core.searching,
             "mission": {
@@ -88,10 +89,9 @@ class Handler(BaseHTTPRequestHandler):
         with lock:
             if path == "/api/mode":
                 mode = data.get("mode")
-                if mode not in core.MODES:
+                if not core.set_mode(mode):
                     self.send_json({"error": "invalid mode", "modes": core.MODES}, 400)
                     return
-                core.set_mode(mode)
                 mission.add("MODE_CHANGED", {"mode": mode})
 
             elif path == "/api/mission/start":
@@ -100,12 +100,30 @@ class Handler(BaseHTTPRequestHandler):
 
             elif path == "/api/mission/stop":
                 mission.stop()
-                core.set_mode("PATROL")
+                core.stop()
 
             elif path == "/api/mission/reset":
                 core.reset()
                 mission.active = False
                 mission.add("MISSION_RESET")
+
+            elif path == "/api/command":
+                command = str(data.get("command", "")).upper()
+                if command == "STOP":
+                    core.stop()
+                    mission.add("EMERGENCY_STOP")
+                elif command == "RESUME":
+                    core.resume()
+                    mission.add("MOTION_RESUMED")
+                elif command == "RETURN_HOME":
+                    core.return_home()
+                    mission.add("RETURN_HOME")
+                else:
+                    self.send_json({
+                        "error": "invalid command",
+                        "commands": ["STOP", "RESUME", "RETURN_HOME"]
+                    }, 400)
+                    return
 
             else:
                 self.send_json({"error": "not found"}, 404)
@@ -122,7 +140,14 @@ def worker():
     while True:
         with lock:
             sensors.update(core.robot)
-            if core.mode in ("RESCUE", "AUTONOMOUS") and sensors.person_visible and core.robot == VICTIM:
+
+            detected_now = (
+                core.mode in ("RESCUE", "AUTONOMOUS")
+                and sensors.person_visible
+                and core.robot == VICTIM
+                and not core.found
+            )
+            if detected_now:
                 core.report_found()
                 mission.add("PERSON_DETECTED", {"position": list(VICTIM)})
 
