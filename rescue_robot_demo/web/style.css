@@ -1,1 +1,35 @@
-*{box-sizing:border-box}body{margin:0;background:#080d12;color:#e7eef5;font-family:system-ui,sans-serif}header{height:76px;padding:14px 24px;border-bottom:1px solid #26323e;display:flex;justify-content:space-between;align-items:center;background:#0c131b}h1{font-size:20px;margin:0 0 3px;letter-spacing:1px}header span{font-size:11px;color:#8293a5}header strong{padding:8px 13px;border:1px solid #314252;border-radius:8px;font-size:12px}main{display:grid;grid-template-columns:minmax(650px,1fr) 390px;gap:16px;padding:16px}.panel{background:#0e161f;border:1px solid #263544;border-radius:12px;padding:14px}.panel-title{font-size:11px;letter-spacing:1.5px;color:#8da0b3;margin-bottom:12px}.map-panel{overflow:auto}#map{position:relative;width:672px;height:448px;background:#121c25;border:1px solid #293846}.cell{position:absolute;width:28px;height:28px;border-right:1px solid #1d2a35;border-bottom:1px solid #1d2a35}.obstacle{background:#4d5964}.marker{position:absolute;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border-radius:5px;z-index:3}.base{background:#438ed0}.victim{background:#d85c63}.robot{background:#62d989;color:#07120b;box-shadow:0 0 14px #62d989}aside{display:flex;flex-direction:column;gap:16px}button{display:block;width:100%;margin:7px 0;padding:10px;background:#151f29;color:#dce7ef;border:1px solid #344555;border-radius:7px;text-align:left;cursor:pointer}button:hover{background:#1c2a37}pre{margin:0;white-space:pre-wrap;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;color:#b9c8d5}#log{max-height:180px;overflow:auto}@media(max-width:1100px){main{grid-template-columns:1fr}aside{display:grid;grid-template-columns:1fr 1fr}.map-panel{overflow:auto}}
+*{box-sizing:border-box}
+body{margin:0;background:#080d12;color:#e7eef5;font-family:system-ui,sans-serif}
+header{min-height:76px;padding:14px 24px;border-bottom:1px solid #26323e;display:flex;justify-content:space-between;align-items:center;background:#0c131b}
+h1{font-size:20px;margin:0 0 3px;letter-spacing:1px}
+header span{font-size:11px;color:#8293a5}
+.header-right{display:flex;gap:10px;align-items:center}
+header strong,.badge{padding:8px 13px;border:1px solid #314252;border-radius:8px;font-size:12px}
+.badge{font-weight:800}
+.badge.online{border-color:#2f9e61}
+.badge.offline{border-color:#9e4545}
+main{display:grid;grid-template-columns:minmax(650px,1fr) 430px;gap:16px;padding:16px}
+.panel{background:#0e161f;border:1px solid #263544;border-radius:12px;padding:14px}
+.panel-title{font-size:11px;letter-spacing:1.5px;color:#8da0b3;margin-bottom:12px}
+.map-panel{overflow:auto}
+#map{position:relative;width:672px;height:448px;background:#121c25;border:1px solid #293846}
+.cell{position:absolute;width:28px;height:28px;border-right:1px solid #1d2a35;border-bottom:1px solid #1d2a35}
+.obstacle{background:#4d5964}
+.marker{position:absolute;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border-radius:5px;z-index:3}
+.base{background:#438ed0}
+.victim{background:#d85c63}
+.robot{background:#62d989;color:#07120b;box-shadow:0 0 14px #62d989}
+aside{display:flex;flex-direction:column;gap:16px}
+button{display:block;width:100%;margin:7px 0;padding:10px;background:#151f29;color:#dce7ef;border:1px solid #344555;border-radius:7px;text-align:left;cursor:pointer}
+button:hover{background:#1c2a37}
+input{width:100%;padding:10px;background:#0a1118;color:#e7eef5;border:1px solid #344555;border-radius:7px}
+.mission-row{display:grid;grid-template-columns:1fr 92px;gap:8px}
+.mission-row button{margin:0}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metrics div{padding:9px;background:#0a1118;border:1px solid #202e3b;border-radius:7px}
+.metrics span{display:block;color:#71869a;font-size:9px;letter-spacing:1px}
+.metrics b{display:block;margin-top:4px;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{margin:0;white-space:pre-wrap;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;color:#b9c8d5}
+#events{max-height:170px;overflow:auto}
+@media(max-width:1150px){main{grid-template-columns:1fr}aside{display:grid;grid-template-columns:1fr 1fr}}
+@media(max-width:760px){main{padding:8px}.panel{padding:10px}aside{display:flex}.header-right{display:none}}
