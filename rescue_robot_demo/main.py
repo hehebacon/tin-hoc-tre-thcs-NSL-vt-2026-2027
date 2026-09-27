@@ -13,7 +13,7 @@ DT = TICK_MS / 1000.0
 class App:
     def __init__(self, root):
         self.root = root
-        root.title("RESCUE ROBOT OS - Simulator V2")
+        root.title("RESCUE ROBOT OS - Simulator V3")
         root.resizable(False, False)
 
         self.core = RescueCore(MAP_W, MAP_H, OBSTACLES, BASE, VICTIM)
