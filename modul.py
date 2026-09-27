@@ -1,137 +1,274 @@
 import os
 from build123d import *
 
-# ==========================================
-# THÔNG SỐ THIẾT KẾ CƠ KHÍ CHUẨN IN 3D FDM
-# ==========================================
-SERVO_W = 20.0      # Chiều rộng Servo tiêu chuẩn (mm)
-SERVO_L = 40.0      # Chiều dài Servo (mm)
-SERVO_H = 40.0      # Chiều cao Servo (mm)
-HORN_R = 10.0       # Bán kính tròn của cùi răng servo horn
-CLEARANCE = 0.2     # Dung sai lắp ráp cho nhựa co ngót
-WALL_T = 4.5        # Độ dày thành chịu lực tối thiểu cho robot 80cm
-BOLT_R = 1.6        # Bán kính lỗ vít M3 (Đường kính 3.2mm)
-INSERT_R = 2.1      # Bán kính lỗ cấy ren đồng nhiệt M3 (Đường kính 4.2mm)
+# ============================================================
+# RESCUE QUADRUPED — PRINTABLE LEG CAD V2
+# Parametric mechanical model for FDM prototyping.
+# All dimensions are millimeters.
+#
+# IMPORTANT:
+# - Verify the actual servo body, horn, screws and inserts before printing.
+# - These are prototype dimensions, not a certified load-bearing design.
+# - Change values in DESIGN below instead of editing geometry functions.
+# ============================================================
 
-# Tạo thư mục đầu ra
 os.makedirs("output_cad", exist_ok=True)
 
-# ==========================================
-# PART 1: BRACKET_HIP (Gá hông bắt vào thân)
-# ==========================================
+# ============================================================
+# DESIGN PARAMETERS
+# ============================================================
+DESIGN = {
+    # Robot / leg
+    "robot_nominal_height": 800.0,
+    "thigh_length": 180.0,
+    "shin_length": 200.0,
+
+    # Servo envelope — replace with measured dimensions of the actual servo
+    "servo_width": 20.0,
+    "servo_length": 40.0,
+    "servo_height": 40.0,
+
+    # FDM / mechanical
+    "wall": 5.0,
+    "clearance": 0.35,
+    "m3_hole_d": 3.4,
+    "m3_insert_d": 4.3,
+    "pivot_d": 4.2,
+    "horn_d": 20.0,
+    "foot_d": 24.0,
+
+    # Manufacturing
+    "stl_tolerance": 0.05,
+    "stl_angular_tolerance": 0.1,
+}
+
+S = DESIGN
+SERVO_W = S["servo_width"]
+SERVO_L = S["servo_length"]
+SERVO_H = S["servo_height"]
+WALL = S["wall"]
+CLR = S["clearance"]
+M3_R = S["m3_hole_d"] / 2
+INSERT_R = S["m3_insert_d"] / 2
+PIVOT_R = S["pivot_d"] / 2
+HORN_R = S["horn_d"] / 2
+FOOT_R = S["foot_d"] / 2
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+def export_part(part, name):
+    export_step(part, f"output_cad/{name}.step")
+    export_stl(
+        part,
+        f"output_cad/{name}.stl",
+        tolerance=S["stl_tolerance"],
+        angular_tolerance=S["stl_angular_tolerance"],
+        ascii_format=False,
+    )
+
+
+# ============================================================
+# PART 1 — HIP BRACKET
+# Compact servo cradle with mounting ears and cable opening.
+# ============================================================
 def design_hip_bracket():
+    outer_w = SERVO_W + 2 * WALL
+    outer_l = SERVO_L + 2 * WALL
+    outer_h = SERVO_H + WALL
+
     with BuildPart() as p:
-        # Khối hộp bao ngoài Servo Hip
-        Box(SERVO_W + WALL_T*2, SERVO_L + WALL_T*2, SERVO_H + WALL_T, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        
-        # Khoét rỗng lòng đặt servo và khe đi dây
+        Box(
+            outer_w,
+            outer_l,
+            outer_h,
+            align=(Align.CENTER, Align.CENTER, Align.MIN),
+        )
+
+        # Servo cavity
         with BuildPart(mode=Mode.SUBTRACT):
-            Box(SERVO_W + CLEARANCE*2, SERVO_L + CLEARANCE*2, SERVO_H + 10, align=(Align.CENTER, Align.CENTER, Align.MIN))
-            Box(SERVO_W - 4, SERVO_L + 10, 10, align=(Align.CENTER, Align.CENTER, Align.MIN))
-            
-        # Tạo tai cánh gá bắt vít vào khung sườn chính robot
+            Box(
+                SERVO_W + 2 * CLR,
+                SERVO_L + 2 * CLR,
+                SERVO_H + WALL,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
+            )
+
+            # Rear cable/service opening
+            Box(
+                SERVO_W * 0.65,
+                WALL + 4.0,
+                SERVO_H * 0.55,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
+            )
+
+        # Strong mounting ears
+        ear_x = (SERVO_W + 2 * WALL) / 2 + WALL * 1.5
         with BuildPart(mode=Mode.ADD):
-            Box(SERVO_W + WALL_T*6, 15, WALL_T, align=(Align.CENTER, Align.CENTER, Align.MIN))
-                
-        # Đục lỗ vít M3 và lỗ đóng ren cấy nhiệt brass insert
+            with Locations(Pos(ear_x, 0, 0), Pos(-ear_x, 0, 0)):
+                Box(
+                    WALL * 2.0,
+                    18.0,
+                    WALL,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN),
+                )
+
+        # M3 mounting holes
         with BuildPart(mode=Mode.SUBTRACT):
-            # Lỗ gá khung thân sườn (2 bên tai)
-            with Locations(Pos((SERVO_W + WALL_T*4)/2, 0, WALL_T/2), Pos(-(SERVO_W + WALL_T*4)/2, 0, WALL_T/2)):
-                Cylinder(radius=BOLT_R, height=20)
-            # Lỗ bắt tai servo hông
-            with Locations(Pos(0, (SERVO_L + WALL_T)/2, SERVO_H - 5), Pos(0, -(SERVO_L + WALL_T)/2, SERVO_H - 5)):
-                Cylinder(radius=INSERT_R, height=15, rotation=(90, 0, 0))
-                
+            with Locations(
+                Pos(ear_x, 0, WALL / 2),
+                Pos(-ear_x, 0, WALL / 2),
+            ):
+                Cylinder(radius=M3_R, height=WALL + 2.0)
+
+    p.part.label = "RESCUE_QUADRUPED_HIP_BRACKET"
     return p.part
 
-# ==========================================
-# PART 2: LINK_THIGH (XƯƠNG ĐÙI CHỊU LỰC CHỮ I)
-# ==========================================
+
+# ============================================================
+# PART 2 — THIGH LINK
+# Lightweight boxed beam with rounded/pivot ends.
+# ============================================================
 def design_thigh_link():
-    length_thigh = 200.0 # Chiều dài tâm trục theo yêu cầu robot 80cm
+    length = S["thigh_length"]
+    beam_w = 28.0
+    beam_h = 18.0
+    end_r = 18.0
+
     with BuildPart() as p:
-        # Thân xương dạng dầm chữ I để tăng mô-men chống uốn khi robot dập chân
-        Box(WALL_T * 3, length_thigh + 40, WALL_T * 4, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-        
-        # Đầu tròn liên kết với trục gá Servo Hip hông
-        with Locations(Pos(0, -length_thigh/2, 0)):
-            Cylinder(radius=HORN_R + WALL_T, height=SERVO_W + WALL_T, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-            
-        # Đầu gá tích hợp luôn khoang chứa hộp động cơ Servo gối (Knee Servo)
-        with Locations(Pos(0, length_thigh/2, 0)):
-            Box(SERVO_W + WALL_T*2, SERVO_L + WALL_T*2, SERVO_H + WALL_T*2, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-            
-        # Các bước cắt gọt khoét rãnh giảm trọng lượng và tạo không gian lắp đặt
+        # Main structural beam
+        Box(
+            beam_w,
+            length,
+            beam_h,
+            align=(Align.CENTER, Align.CENTER, Align.CENTER),
+        )
+
+        # Rounded reinforcement ends
+        with Locations(
+            Pos(0, -length / 2, 0),
+            Pos(0, length / 2, 0),
+        ):
+            Cylinder(
+                radius=end_r,
+                height=beam_h,
+                align=(Align.CENTER, Align.CENTER, Align.CENTER),
+            )
+
+        # Weight-relief pocket through the central section
+        pocket_w = 14.0
+        pocket_l = max(40.0, length - 55.0)
+        pocket_h = beam_h * 0.55
+
         with BuildPart(mode=Mode.SUBTRACT):
-            # Khoét lòng xương chữ I hai bên sườn
-            with Locations(Pos(WALL_T*1.2, 0, 0), Pos(-WALL_T*1.2, 0, 0)):
-                Box(WALL_T, length_thigh - 30, WALL_T * 2.5, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-            # Khoét hộp chứa Servo Knee
-            with Locations(Pos(0, length_thigh/2, 0)):
-                Box(SERVO_W + CLEARANCE*2, SERVO_L + CLEARANCE*2, SERVO_H + 10, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-                Cylinder(radius=BOLT_R, height=SERVO_W + 50, rotation=(0, 90, 0))
-            # Hốc đặt Servo Horn tròn ở đầu hông
-            with Locations(Pos(0, -length_thigh/2, (SERVO_W + WALL_T)/2 - 2)):
-                Cylinder(radius=HORN_R, height=4)
-                Cylinder(radius=BOLT_R, height=30)
-                
+            Box(
+                pocket_w,
+                pocket_l,
+                pocket_h,
+                align=(Align.CENTER, Align.CENTER, Align.CENTER),
+            )
+
+        # Pivot holes at both ends
+        with BuildPart(mode=Mode.SUBTRACT):
+            with Locations(
+                Pos(0, -length / 2, 0),
+                Pos(0, length / 2, 0),
+            ):
+                Cylinder(
+                    radius=PIVOT_R,
+                    height=beam_h + 4.0,
+                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                )
+
+    p.part.label = "RESCUE_QUADRUPED_THIGH_LINK"
     return p.part
 
-# ==========================================
-# PART 3: LINK_KNEE (CẲNG CHÂN TIẾP ĐỊA CÔN)
-# ==========================================
+
+# ============================================================
+# PART 3 — KNEE / SHIN LINK
+# Tapered structural link with reinforced joint and foot end.
+# ============================================================
 def design_knee_shin():
-    length_shin = 220.0 # Chiều dài cẳng chân dưới tiếp đất
+    length = S["shin_length"]
+    top_r = 17.0
+    bottom_r = 11.0
+
     with BuildPart() as p:
-        # Tạo phôi côn to ở gối nhỏ dần về bàn chân để tối ưu phân phối ứng suất lực
-        Cone(bottom_radius=18, top_radius=10, height=length_shin, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        
-        # Cùm chữ U bắt vào trục xoay bản lề của khớp gối
-        with Locations(Pos(0, 0, length_shin)):
-            Box(SERVO_W + WALL_T*2 + CLEARANCE*2, 35, 40, align=(Align.CENTER, Align.CENTER, Align.MIN))
-            
-        # Khoét rãnh cùm chữ U để ôm vừa khít đầu xương đùi
+        # Tapered structural body
+        Cone(
+            bottom_radius=bottom_r,
+            top_radius=top_r,
+            height=length,
+            align=(Align.CENTER, Align.CENTER, Align.MIN),
+        )
+
+        # Reinforced knee block
+        with Locations(Pos(0, 0, length - 18.0)):
+            Box(
+                SERVO_W + 2 * WALL + 2 * CLR,
+                36.0,
+                36.0,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
+            )
+
+        # Knee pivot bore
         with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(Pos(0, 0, length_shin - 2)):
-                Box(SERVO_W + CLEARANCE*2, 40, 45, align=(Align.CENTER, Align.CENTER, Align.MIN))
-                # Trục chốt xuyên tâm bản lề bản xoay
-                Cylinder(radius=BOLT_R, height=SERVO_W + 30, rotation=(0, 90, 0))
-                # Lỗ đóng tán đồng cấy nhiệt bắt vít cố định đĩa truyền lực servo
-                with Locations(Pos((SERVO_W+WALL_T)/2, 0, 20), Pos(-(SERVO_W+WALL_T)/2, 0, 20)):
-                    Cylinder(radius=INSERT_R, height=10, rotation=(0, 90, 0))
-                    
-        # Bo tròn hình cầu tại gót bàn chân (Foot pad) để bọc đệm cao su bám sàn cứu hộ
-        with Locations(Pos(0, 0, 0)):
-            Sphere(radius=12, mode=Mode.ADD)
-            
+            with Locations(Pos(0, 0, length - 1.0)):
+                Cylinder(
+                    radius=PIVOT_R,
+                    height=40.0,
+                    rotation=(0, 90, 0),
+                )
+
+        # Flat mounting foot at ground end
+        with Locations(Pos(0, 0, -2.0)):
+            Cylinder(
+                radius=FOOT_R,
+                height=4.0,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
+            )
+
+    p.part.label = "RESCUE_QUADRUPED_KNEE_SHIN"
     return p.part
 
-# ==========================================
-# THỰC THI XUẤT FILE VẬT LÝ (.STEP VÀ .STL)
-# ==========================================
-print("[XZORT CAD] Đang xử lý hình học không gian...")
+
+# ============================================================
+# GENERATE + EXPORT
+# ============================================================
+print("[CAD V2] Building parametric rescue-quadruped leg...")
+
 hip = design_hip_bracket()
 thigh = design_thigh_link()
 knee = design_knee_shin()
 
-print("[XZORT CAD] Đang xuất file lưới in 3D và file lắp ráp gốc...")
+export_part(hip, "RescueQuadruped_Part1_Hip_Bracket")
+export_part(thigh, "RescueQuadruped_Part2_Thigh_Link")
+export_part(knee, "RescueQuadruped_Part3_Knee_Shin")
 
-# SỬA LỖI: Sử dụng bộ hàm xuất tập trung toàn cục (Exporter Functions) chuẩn API mới
-export_step(hip, "output_cad/XZORT_Part1_Hip_Bracket.step")
-export_stl(hip, "output_cad/XZORT_Part1_Hip_Bracket.stl")
+# Assembly preview only — not a physical fit validation.
+assembly = Compound(
+    label="RESCUE_QUADRUPED_FULL_LEG_ASSEMBLY",
+    children=[
+        hip.moved(Location(Pos(0, -95, 25), (0, 90, 0))),
+        thigh.moved(Location(Pos(0, 0, 0), (0, 0, 0))),
+        knee.moved(Location(Pos(0, 90, -S["shin_length"]), (0, 35, 0))),
+    ],
+)
 
-export_step(thigh, "output_cad/XZORT_Part2_Thigh_Link.step")
-export_stl(thigh, "output_cad/XZORT_Part2_Thigh_Link.stl")
+export_step(assembly, "output_cad/RescueQuadruped_Full_Leg_Assembly.step")
 
-export_step(knee, "output_cad/XZORT_Part3_Knee_Shin.step")
-export_stl(knee, "output_cad/XZORT_Part3_Knee_Shin.stl")
+# Human-readable design specification
+with open("output_cad/RescueQuadruped_Print_Spec.txt", "w", encoding="utf-8") as f:
+    f.write("RESCUE QUADRUPED — LEG CAD V2\n")
+    f.write("=" * 48 + "\n")
+    for key, value in DESIGN.items():
+        f.write(f"{key}: {value} mm\n" if isinstance(value, (int, float)) else f"{key}: {value}\n")
+    f.write("\nFILES\n")
+    f.write("- Hip bracket: STEP + STL\n")
+    f.write("- Thigh link: STEP + STL\n")
+    f.write("- Knee/shin: STEP + STL\n")
+    f.write("- Full leg assembly: STEP\n")
 
-# Tạo cụm lắp ráp mô phỏng tổng thể (Assembly)
-assembly = Compound(label="XZORT_Full_Leg_Assembly", children=[
-    hip.moved(Location(Pos(0, -100, 20), (0, 90, 0))),
-    thigh.moved(Location(Pos(0, 0, 0), (0, 0, 0))),
-    knee.moved(Location(Pos(0, 100, -220), (0, 35, 0))) # Giả lập tư thế khuỵu chân chịu lực 35 độ
-])
-export_step(assembly, "output_cad/XZORT_Assembly_Full_Leg.step")
-
-print("\n[THÀNH CÔNG MỸ MÃN] Toàn bộ file đã được lưu vào thư mục '/output_cad/'!")
+print("[CAD V2] Export complete.")
+print("[CAD V2] Check output_cad/ before printing.")
