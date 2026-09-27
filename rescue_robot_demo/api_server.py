@@ -13,6 +13,9 @@ from state_machine import StateMachine
 from mission import MissionManager
 from safety import SafetyManager
 from gait import GaitPlanner
+from task_engine import TaskEngine
+from decision_engine import DecisionEngine
+from stabilization import BodyStabilizer
 
 core = RescueCore(MAP_W, MAP_H, OBSTACLES, BASE, VICTIM)
 sensors = SensorSimulator(VICTIM)
@@ -24,6 +27,9 @@ mission = MissionManager()
 safety = SafetyManager()
 gait = GaitPlanner()
 public = PublicDataSimulator()
+tasks = TaskEngine()
+decision = DecisionEngine()
+stabilizer = BodyStabilizer()
 lock = threading.RLock()
 previous_robot = core.robot
 
@@ -46,6 +52,7 @@ def snapshot():
     with lock:
         state = state_machine.update(core.mode, core.found, core.searching, core.robot == BASE)
         perception = fused_perception()
+        decision_action = decision.decide(core.mode, safety.allow_motion(telemetry.battery)[0], core.found, perception["person_confirmed"], bool(core.path), core.robot == BASE)
         return {
             "robot": {"x": core.robot[0], "y": core.robot[1]},
             "mode": core.mode,
@@ -53,6 +60,9 @@ def snapshot():
             "emergency_stop": core.emergency_stop,
             "safety": safety.snapshot(),
             "gait": gait.snapshot(moving=bool(core.path), dt=0.0),
+            "decision": decision_action,
+            "task": tasks.snapshot(),
+            "stabilization": stabilizer.snapshot(telemetry.pitch, telemetry.roll),
             "terrain": core.terrain_at(),
             "path": [list(p) for p in core.path[:20]],
             "found": core.found,
@@ -129,11 +139,12 @@ class Handler(BaseHTTPRequestHandler):
                 if not allowed:
                     self.send_json({"error": reason}, 409); return
                 mission.start(data.get("name", "SEARCH & RESCUE")); core.set_mode("RESCUE")
-                mission.add("SEARCH_STARTED", {"pipeline": "RGB+THERMAL+NAV"})
+                tasks.load_rescue(BASE, VICTIM)
+                mission.add("SEARCH_STARTED", {"pipeline": "PERCEPTION+DECISION+NAV+GAIT"})
             elif path == "/api/mission/stop":
                 mission.stop(); safety.stop("mission_stop"); core.stop()
             elif path == "/api/mission/reset":
-                core.reset(); safety.resume(telemetry.battery); mission.active = False; mission.add("MISSION_RESET")
+                core.reset(); safety.resume(telemetry.battery); tasks.__init__(); mission.active = False; mission.add("MISSION_RESET")
             elif path == "/api/command":
                 command = str(data.get("command", "")).upper()
                 if command == "STOP":
@@ -174,6 +185,8 @@ def worker():
                 core.report_found()
                 mission.add("PERSON_DETECTED", {"position": list(VICTIM), "confidence": perception["confidence"]})
                 mission.add("LOCATION_RECORDED", {"gps": telemetry.gps})
+                if tasks.current() and tasks.current().action == "SEARCH": tasks.complete_current()
+                if tasks.current() and tasks.current().action == "CONFIRM": tasks.complete_current()
             allowed, reason = safety.allow_motion(telemetry.battery)
             if allowed:
                 core.step()
@@ -182,9 +195,12 @@ def worker():
             telemetry.update(core.robot, previous_robot)
             previous_robot = core.robot
             gait.update(moving=bool(core.path), dt=0.5)
+            if tasks.current() and tasks.current().action == "RETURN" and core.robot == BASE:
+                tasks.complete_current()
             if core.found and core.robot == BASE and mission.active:
                 mission.add("MISSION_COMPLETE")
                 mission.active = False
+                while tasks.current(): tasks.complete_current()
         time.sleep(0.5)
 
 
