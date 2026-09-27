@@ -9,6 +9,7 @@
 #include "ThermalInterface.h"
 #include "DecisionEngine.h"
 #include "HardwareStatus.h"
+#include "Perception.h"
 
 enum class RobotMode {
     IDLE,
@@ -36,6 +37,7 @@ struct RobotCoreStatus {
     bool sensorsReady;
     bool fault;
     uint32_t cycle;
+    WorldState world;
 };
 
 class RobotCore {
@@ -72,6 +74,9 @@ public:
     void startEndGame();
     void finishCompetition();
     void setCompetitionInput(const CompetitionInputs& inputs);
+    void setPerceptionInput(const WorldState& world);
+    const WorldState& worldState() const;
+    String colorName() const;
     String phaseName() const;
 
 private:
@@ -82,6 +87,7 @@ private:
     CameraInterface& cameraInterface;
     ThermalInterface& thermalInterface;
     DecisionEngine decisionEngine;
+    Perception perception;
 
     RobotMode currentMode = RobotMode::IDLE;
     bool missionActive = false;
