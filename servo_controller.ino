@@ -12,6 +12,7 @@
 #include "RobotCore.h"
 #include "RobotWebServer.h"
 #include "Perception.h"
+#include "ColorSensorInterface.h"
 
 MotionController motionController;
 PCA9685ServoDriver pca9685;
@@ -241,6 +242,7 @@ void printHelp()
     Serial.println("  comp_autonomous | comp_driver | comp_endgame | comp_finish | comp_status");
     Serial.println("  sensor <name> <0|1>  (simulator/test input)");
     Serial.println("  color <RED|GREEN|BLUE|YELLOW|BLACK|WHITE|UNKNOWN> <confidence>");
+    Serial.println("  rgb <r> <g> <b>  (RGB simulator/classifier)");
     Serial.println("  line <LEFT|CENTER|RIGHT|INTERSECTION|LOST>");
     Serial.println("  perception_status");
     Serial.println();
@@ -307,6 +309,21 @@ void processCommand(String command)
         return;
     }
 
+    if (command.startsWith("rgb ")) {
+        int r=0,g=0,b=0;
+        if (sscanf(command.c_str(), "rgb %d %d %d", &r, &g, &b) == 3) {
+            RGBReading rgb{static_cast<uint16_t>(max(0,r)), static_cast<uint16_t>(max(0,g)), static_cast<uint16_t>(max(0,b)), true};
+            float confidence=0.0f;
+            perceptionInput.targetColor.color=ColorSensorInterface::classify(rgb, confidence);
+            perceptionInput.targetColor.confidence=confidence;
+            perceptionInput.targetColor.valid=true;
+            robotCore.setPerceptionInput(perceptionInput);
+            Serial.printf("[PERCEPTION] rgb=%d,%d,%d -> %s confidence=%.2f\n",
+                r,g,b,Perception::colorName(perceptionInput.targetColor.color),confidence);
+        }
+        return;
+    }
+
     if (command.startsWith("color ")) {
         char color[16];
         float confidence = 1.0f;
@@ -342,6 +359,7 @@ void processCommand(String command)
             else if (n == "OBSTACLE") competitionInputs.obstacleDetected = v;
             else if (n == "TARGET") competitionInputs.targetDetected = v;
             else if (n == "PICKED") competitionInputs.targetPicked = v;
+            else if (n == "CLASSIFIED") competitionInputs.targetClassified = v;
             else if (n == "PLACED") competitionInputs.targetPlaced = v;
             else if (n == "ALL_DONE") competitionInputs.allAutonomousTasksDone = v;
             else if (n == "ENDGAME") competitionInputs.endGameReady = v;
@@ -350,7 +368,7 @@ void processCommand(String command)
             robotCore.setCompetitionInput(competitionInputs);
             Serial.printf("[COMP] sensor %s=%s\n", n.c_str(), v ? "true" : "false");
         } else {
-            Serial.println("[COMP] usage: sensor <line|intersection|obstacle|target|picked|placed|all_done|endgame|home> <0|1>");
+            Serial.println("[COMP] usage: sensor <line|intersection|obstacle|target|picked|classified|placed|all_done|endgame|home> <0|1>");
         }
         return;
     }
