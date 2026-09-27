@@ -24,6 +24,7 @@ RobotWebServer webServer(robotCore, motionController, motionSafety);
 
 String serialBuffer;
 bool safetyStopLatched = false;
+CompetitionInputs competitionInputs;
 unsigned long lastTelemetryMs = 0;
 unsigned long lastMotionMs = 0;
 
@@ -204,7 +205,8 @@ void emitTelemetry()
     const RobotCoreStatus core = robotCore.status();
 
     Serial.printf(
-        "{\"type\":\"core\",\"mode\":\"%s\",\"goal\":\"%s\",\"action\":\"%s\",\"active\":%s,\"person\":%s,\"thermal\":%s,\"healthy\":%s,\"cycle\":%lu}\n",
+        "{\"type\":\"core\",\"phase\":\"%s\",\"mode\":\"%s\",\"goal\":\"%s\",\"action\":\"%s\",\"active\":%s,\"person\":%s,\"thermal\":%s,\"healthy\":%s,\"cycle\":%lu}\n",
+        robotCore.phaseName().c_str(),
         robotCore.modeName().c_str(),
         robotCore.goalName().c_str(),
         robotCore.actionName().c_str(),
@@ -232,6 +234,10 @@ void printHelp()
     Serial.println("  goal RETURN_HOME");
     Serial.println("  goal DEMO");
     Serial.println("  found | rescue_done | home | ai_status | reset_mission");
+    Serial.println();
+    Serial.println("COMPETITION");
+    Serial.println("  comp_autonomous | comp_driver | comp_endgame | comp_finish | comp_status");
+    Serial.println("  sensor <name> <0|1>  (simulator/test input)");
     Serial.println();
     Serial.println("MISSION");
     Serial.println("  mission <IDLE|PATROL|SEARCH|RESCUE|RETURN_HOME>");
@@ -271,6 +277,59 @@ void processCommand(String command)
     }
 
     Serial.printf("[CMD] %s\n", command.c_str());
+
+    if (command == "comp_autonomous") {
+        robotCore.startAutonomous();
+        Serial.println("[COMP] AUTONOMOUS started");
+        return;
+    }
+
+    if (command == "comp_driver") {
+        robotCore.startDriverControl();
+        Serial.println("[COMP] DRIVER_CONTROL started");
+        return;
+    }
+
+    if (command == "comp_endgame") {
+        robotCore.startEndGame();
+        Serial.println("[COMP] END_GAME started");
+        return;
+    }
+
+    if (command == "comp_finish") {
+        robotCore.finishCompetition();
+        Serial.println("[COMP] FINISHED");
+        return;
+    }
+
+    if (command.startsWith("sensor ")) {
+        int value = 0;
+        char name[24];
+        if (sscanf(command.c_str(), "sensor %23s %d", name, &value) == 2) {
+            const bool v = value != 0;
+            String n(name); n.toUpperCase();
+            if (n == "LINE") competitionInputs.lineDetected = v;
+            else if (n == "INTERSECTION") competitionInputs.intersectionDetected = v;
+            else if (n == "OBSTACLE") competitionInputs.obstacleDetected = v;
+            else if (n == "TARGET") competitionInputs.targetDetected = v;
+            else if (n == "PICKED") competitionInputs.targetPicked = v;
+            else if (n == "PLACED") competitionInputs.targetPlaced = v;
+            else if (n == "ALL_DONE") competitionInputs.allAutonomousTasksDone = v;
+            else if (n == "ENDGAME") competitionInputs.endGameReady = v;
+            else if (n == "HOME") competitionInputs.homeDetected = v;
+            else { Serial.println("[COMP] unknown sensor"); return; }
+            robotCore.setCompetitionInput(competitionInputs);
+            Serial.printf("[COMP] sensor %s=%s\n", n.c_str(), v ? "true" : "false");
+        } else {
+            Serial.println("[COMP] usage: sensor <line|intersection|obstacle|target|picked|placed|all_done|endgame|home> <0|1>");
+        }
+        return;
+    }
+
+    if (command == "comp_status") {
+        Serial.printf("[COMP] phase=%s goal=%s action=%s\n", robotCore.phaseName().c_str(), robotCore.goalName().c_str(), robotCore.actionName().c_str());
+        return;
+    }
 
     if (command == "help") {
         printHelp();
