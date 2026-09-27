@@ -181,6 +181,8 @@ def worker():
                 and core.robot == VICTIM
                 and not core.found
             )
+            if tasks.current() and tasks.current().action == "NAVIGATE" and core.robot != BASE:
+                tasks.complete_current()
             if detected_now:
                 core.report_found()
                 mission.add("PERSON_DETECTED", {"position": list(VICTIM), "confidence": perception["confidence"]})
