@@ -26,3 +26,6 @@
 // Motion loop target. The gait planner is deterministic and
 // receives elapsed seconds from the firmware loop.
 #define MOTION_UPDATE_MS 50
+
+// Keep the API key empty in the public repository. Configure it locally.
+#define GEMINI_API_KEY ""
