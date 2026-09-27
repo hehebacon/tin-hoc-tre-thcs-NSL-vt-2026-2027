@@ -1,7 +1,9 @@
 #pragma once
 
 #define ROBOT_NAME "AI_QUADRUPED"
-#define FIRMWARE_VERSION "0.3.0"
+#define FIRMWARE_VERSION "0.4.0"
+
+#define GEMINI_MODEL "gemini-3.6-flash"
 
 #define SERVO_COUNT 12
 #define LEG_COUNT 4
