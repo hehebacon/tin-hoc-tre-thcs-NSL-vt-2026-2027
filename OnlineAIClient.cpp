@@ -8,7 +8,7 @@ static String jsonEscape(const String& input) {
     String out;
     for (size_t i=0;i<input.length();++i) {
         const char c=input[i];
-        if(c=='"') out += "\\"";
+        if(c=='"') out += "\\\"";
         else if(c=='\\') out += "\\\\";
         else if(c=='\n') out += "\\n";
         else if(c=='\r') out += "\\r";
@@ -27,7 +27,9 @@ static String extractGeminiText(const String& json) {
     for(;p<(int)json.length();++p) {
         char c=json[p];
         if(escaped) {
-            if(c=='n') out+='\n'; else if(c=='r') out+='\r'; else out+=c;
+            if(c=='n') out+='\n';
+            else if(c=='r') out+='\r';
+            else out+=c;
             escaped=false;
         } else if(c=='\\') escaped=true;
         else if(c=='"') break;
@@ -37,21 +39,16 @@ static String extractGeminiText(const String& json) {
 }
 
 void OnlineAIClient::begin() {
-    lastOnline = false;
-    error = "";
+    lastOnline=false;
+    error="";
 }
 
 bool OnlineAIClient::configured() const {
-    return strlen(GEMINI_API_KEY) > 0 && strlen(GEMINI_MODEL) > 0;
+    return strlen(GEMINI_API_KEY)>0 && strlen(GEMINI_MODEL)>0;
 }
 
-bool OnlineAIClient::online() const {
-    return lastOnline;
-}
-
-const String& OnlineAIClient::lastError() const {
-    return error;
-}
+bool OnlineAIClient::online() const { return lastOnline; }
+const String& OnlineAIClient::lastError() const { return error; }
 
 OnlineAIResult OnlineAIClient::ask(const String& prompt) const {
     lastOnline=false;
