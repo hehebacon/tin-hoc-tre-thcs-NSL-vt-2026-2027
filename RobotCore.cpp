@@ -29,6 +29,7 @@ void RobotCore::begin()
     cycle = 0;
     motionController.stopGait();
     decisionEngine.begin();
+    perception.begin();
 }
 
 void RobotCore::update(float dt)
@@ -40,6 +41,7 @@ void RobotCore::update(float dt)
         return;
     }
 
+    perception.update();
     evaluateSensors();
 
     if (coreFault) {
@@ -94,6 +96,20 @@ void RobotCore::evaluateSensors()
 
 void RobotCore::handleMission()
 {
+    const WorldState& world = perception.state();
+    CompetitionInputs competition{};
+    competition.sensorsHealthy = world.sensorsHealthy;
+    competition.lineDetected = world.line != LineState::LOST;
+    competition.intersectionDetected = world.line == LineState::INTERSECTION;
+    competition.obstacleDetected = world.obstacleDetected;
+    competition.targetDetected = world.targetDetected;
+    competition.targetPicked = world.targetPicked;
+    competition.targetPlaced = world.targetPlaced;
+    competition.allAutonomousTasksDone = world.allAutonomousTasksDone;
+    competition.endGameReady = world.endGameReady;
+    competition.homeDetected = world.homeDetected;
+    decisionEngine.setCompetitionInput(competition);
+
     const DecisionInputs inputs = {
         !sensorFault && !coreFault,
         personDetected,
@@ -334,7 +350,7 @@ void RobotCore::setCompetitionInput(const CompetitionInputs& inputs)
     }
 }
 
-String RobotCore::phaseName() const
+void RobotCore::setPerceptionInput(const WorldState& world)\n{\n    perception.setHealthy(world.sensorsHealthy);\n    perception.setLine(world.line);\n    perception.setObstacle(world.obstacleDetected, world.obstacleDistanceCm);\n    perception.setTarget(world.targetDetected);\n    perception.setTargetPicked(world.targetPicked);\n    perception.setTargetPlaced(world.targetPlaced);\n    perception.setColor(world.targetColor.color, world.targetColor.confidence, world.targetColor.valid);\n    perception.setHome(world.homeDetected);\n    perception.setEndGameReady(world.endGameReady);\n    perception.setAllTasksDone(world.allAutonomousTasksDone);\n}\n\nconst WorldState& RobotCore::worldState() const\n{\n    return perception.state();\n}\n\nString RobotCore::colorName() const\n{\n    return String(Perception::colorName(perception.state().targetColor.color));\n}\n\nString RobotCore::phaseName() const
 {
     return decisionEngine.phaseName();
 }
