@@ -83,3 +83,21 @@ PCA9685
 ```
 
 That stage will require correct power wiring and current handling.
+
+
+## Current firmware architecture (v0.4.0)
+
+The firmware now contains:
+- hardware-independent quadruped core, kinematics, gait and servo calibration
+- deterministic offline competition DecisionEngine
+- Perception / WorldState abstraction for line, obstacle, target and color
+- color and line sensor adapter interfaces
+- local Vietnamese/English offline command AI
+- ESP32 Wi-Fi AP + optional STA Internet connection
+- optional Gemini online assistant with offline fallback
+- web dashboard and telemetry
+- safety layer remains authoritative over motion
+
+Online AI is optional. Competition autonomy must not depend on Internet access.
+
+Real-hardware status: the software interfaces are ready for integration, but sensor drivers, pickup/place hardware, field calibration and repeated real-robot testing are still required before claiming competition-ready hardware performance.
