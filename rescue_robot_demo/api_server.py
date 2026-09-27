@@ -21,6 +21,9 @@ thermal = ThermalSimulator(VICTIM)
 telemetry = TelemetrySimulator(BASE)
 state_machine = StateMachine()
 mission = MissionManager()
+safety = SafetyManager()
+gait = GaitPlanner()
+public = PublicDataSimulator()
 lock = threading.RLock()
 previous_robot = core.robot
 
@@ -36,7 +39,7 @@ def snapshot():
             "state": state,
             "emergency_stop": core.emergency_stop,
             "safety": safety.snapshot(),
-            "gait": {k: vars(v) for k, v in gait.update(moving=bool(core.path)).items()},
+            "gait": gait.snapshot(moving=bool(core.path), dt=0.0),
             "found": core.found,
             "searching": core.searching,
             "mission": {
@@ -98,7 +101,10 @@ class Handler(BaseHTTPRequestHandler):
                     core.stop()
                     mission.add("EMERGENCY_STOP")
                 elif action == "RESUME":
-                    safety.resume()
+                    result = safety.resume(telemetry.battery)
+                    if not result["ok"]:
+                        self.send_json({"error": result["reason"]}, 409)
+                        return
                     core.resume()
                     mission.add("MOTION_RESUMED")
                 else:
@@ -106,6 +112,10 @@ class Handler(BaseHTTPRequestHandler):
                     return
 
             elif path == "/api/mode":
+                allowed, reason = safety.allow_motion(telemetry.battery)
+                if not allowed:
+                    self.send_json({"error": reason}, 409)
+                    return
                 mode = data.get("mode")
                 if not core.set_mode(mode):
                     self.send_json({"error": "invalid mode", "modes": core.MODES}, 400)
@@ -122,10 +132,12 @@ class Handler(BaseHTTPRequestHandler):
 
             elif path == "/api/mission/stop":
                 mission.stop()
+                safety.stop("mission_stop")
                 core.stop()
 
             elif path == "/api/mission/reset":
                 core.reset()
+                safety.resume(telemetry.battery)
                 mission.active = False
                 mission.add("MISSION_RESET")
 
@@ -136,12 +148,20 @@ class Handler(BaseHTTPRequestHandler):
                     core.stop()
                     mission.add("EMERGENCY_STOP")
                 elif command == "RESUME":
-                    safety.resume()
+                    result = safety.resume(telemetry.battery)
+                    if not result["ok"]:
+                        self.send_json({"error": result["reason"]}, 409)
+                        return
                     core.resume()
                     mission.add("MOTION_RESUMED")
                 elif command == "RETURN_HOME":
-                    safety.resume()
-                    core.return_home()
+                    allowed, reason = safety.allow_motion(telemetry.battery)
+                    if not allowed:
+                        self.send_json({"error": reason}, 409)
+                        return
+                    if not core.return_home():
+                        self.send_json({"error": "return home blocked"}, 409)
+                        return
                     mission.add("RETURN_HOME")
                 else:
                     self.send_json({
@@ -176,7 +196,9 @@ def worker():
                 core.report_found()
                 mission.add("PERSON_DETECTED", {"position": list(VICTIM)})
 
-            core.step()
+            allowed, _ = safety.allow_motion(telemetry.battery)
+            if allowed:
+                core.step()
             telemetry.update(core.robot, previous_robot)
             previous_robot = core.robot
 
