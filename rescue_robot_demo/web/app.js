@@ -10,7 +10,7 @@ marker("base","B",2,2);marker("victim","P",20,12);const robot=marker("robot","R"
 async function post(path,body={}){const r=await fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});if(!r.ok)throw Error("request failed");return r.json()}
 function setText(id,v){const e=document.querySelector("#"+id);if(e)e.textContent=v}
 function offline(){connection.textContent="OFFLINE";connection.className="badge offline";modeLabel.textContent="OFFLINE"}
-async function command(c){try{await post("/api/command",{command:c})}catch(e){offline()}}
+async function command(c){try{await post("/api/command",{command:c})}catch(e){offline()}}\nasync function safetyAction(action){try{await post("/api/safety",{action})}catch(e){offline()}}
 async function start(){try{await post("/api/mission/start",{name:missionName.value.trim()||"SEARCH ALPHA"})}catch(e){offline()}}
 async function stop(){try{await post("/api/mission/stop")}catch(e){offline()}}
 async function reset(){try{await post("/api/mission/reset")}catch(e){offline()}}
@@ -38,7 +38,7 @@ function render(d){
  "  ASSESSMENT   "+d.sensors.environment,
  "",
  "MISSION\n  ACTIVE       "+(d.mission.active?"YES":"NO"),
- "  NAME         "+d.mission.name,
+ "  NAME         "+d.mission.name,\n "  GAIT         "+(d.gait ? "READY" : "OFFLINE"),
  "  PERSON       "+(d.found?"FOUND":"SEARCHING")
  ].join("\n");
  events.textContent=d.mission.events.map(e=>e.timestamp+"  "+e.event).join("\n");
