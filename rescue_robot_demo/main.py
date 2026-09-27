@@ -65,6 +65,14 @@ class App:
             font=("TkFixedFont", 9),
         ).pack(anchor="w", pady=4)
 
+        self.ik_status = tk.StringVar()
+        ttk.Label(
+            side,
+            textvariable=self.ik_status,
+            justify="left",
+            font=("TkFixedFont", 8),
+        ).pack(anchor="w", pady=4)
+
         self.logbox = tk.Listbox(root, width=52, height=9)
         self.logbox.grid(row=2, column=1, padx=10, pady=(0, 10), sticky="n")
 
