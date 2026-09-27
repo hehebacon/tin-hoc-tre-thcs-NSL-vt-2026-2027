@@ -11,8 +11,10 @@ public:
     bool allowed() const;
     bool timedOut() const;
     void noteMotionCommand();
+    void clearMotion();
 
 private:
     bool stopped = false;
     unsigned long lastMotionMs = 0;
+    bool motionActive = false;
 };
