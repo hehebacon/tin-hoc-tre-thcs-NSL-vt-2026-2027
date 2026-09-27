@@ -211,7 +211,7 @@ if __name__=="__main__":
         try: export_step(p,OUT/f"{name}.step")
         except Exception as e: print("[STEP]",name,e)
 
-    full=assembly()
+    full=assembly()\n    # Full-body master assembly export (single watertight-style CAD object)\n    print("Full body assembly: body + head + neck frill + scales + tail + 4 spider legs + accessories")
     try: export_stl(full,OUT/"dragon_spider_full.stl")
     except Exception as e: print("[FULL STL]",e)
     try: export_step(full,OUT/"dragon_spider_full.step")
