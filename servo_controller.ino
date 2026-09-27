@@ -152,11 +152,13 @@ void processCommand(String command)
     }
 
     if (command == "center") {
+        if (safetyStopLatched) { Serial.println("[SAFETY] E-STOP active"); return; }
         motionController.center();
         return;
     }
 
     if (command == "stand") {
+        if (safetyStopLatched) { Serial.println("[SAFETY] E-STOP active"); return; }
         motionController.stand();
         return;
     }
@@ -249,6 +251,11 @@ void processCommand(String command)
             &channel,
             &angle
         ) == 2) {
+
+        if (safetyStopLatched) {
+            Serial.println("[SAFETY] E-STOP active");
+            return;
+        }
 
         motionController.setServo(
             channel,
