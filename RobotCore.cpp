@@ -139,6 +139,34 @@ void RobotCore::handleMission()
             motionController.setGait("WALK");
             break;
 
+        case DecisionAction::LINE_FOLLOW:
+            currentMode = RobotMode::FOLLOW;
+            motionController.setGait("SLOW_WALK");
+            break;
+
+        case DecisionAction::PICKUP:
+        case DecisionAction::CLASSIFY:
+        case DecisionAction::PLACE:
+            currentMode = RobotMode::DELIVER;
+            motionController.stopGait();
+            break;
+
+        case DecisionAction::DRIVER:
+            currentMode = RobotMode::IDLE;
+            motionController.stopGait();
+            break;
+
+        case DecisionAction::ENDGAME:
+            currentMode = RobotMode::CLIMB;
+            motionController.stopGait();
+            break;
+
+        case DecisionAction::FINISH:
+            currentMode = RobotMode::IDLE;
+            missionActive = false;
+            motionController.stopGait();
+            break;
+
         case DecisionAction::FAULT:
             enterFault();
             break;
