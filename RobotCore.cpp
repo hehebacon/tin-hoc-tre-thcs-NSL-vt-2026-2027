@@ -104,6 +104,7 @@ void RobotCore::handleMission()
     competition.obstacleDetected = world.obstacleDetected;
     competition.targetDetected = world.targetDetected;
     competition.targetPicked = world.targetPicked;
+    competition.targetClassified = world.targetClassified;
     competition.targetPlaced = world.targetPlaced;
     competition.allAutonomousTasksDone = world.allAutonomousTasksDone;
     competition.endGameReady = world.endGameReady;
