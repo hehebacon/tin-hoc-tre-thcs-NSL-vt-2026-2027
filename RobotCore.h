@@ -15,6 +15,15 @@ enum class RobotMode {
     SEARCH,
     RESCUE,
     RETURN_HOME,
+    FOLLOW,
+    AVOID,
+    EXPLORE,
+    INSPECT,
+    DELIVER,
+    RECHARGE,
+    CALIBRATION,
+    DEMO,
+    CLIMB,
     FAULT
 };
 
