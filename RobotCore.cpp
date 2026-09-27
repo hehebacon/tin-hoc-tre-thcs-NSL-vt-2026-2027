@@ -265,6 +265,52 @@ bool RobotCore::setGoal(const String& goal)
     return true;
 }
 
+void RobotCore::startAutonomous()
+{
+    if (coreFault || !motionSafety.allowed()) return;
+    decisionEngine.startAutonomous();
+    missionActive = true;
+    handleMission();
+}
+
+void RobotCore::startDriverControl()
+{
+    if (coreFault || !motionSafety.allowed()) return;
+    decisionEngine.startDriverControl();
+    missionActive = true;
+    currentMode = RobotMode::IDLE;
+    motionController.stopGait();
+}
+
+void RobotCore::startEndGame()
+{
+    if (coreFault || !motionSafety.allowed()) return;
+    decisionEngine.startEndGame();
+    missionActive = true;
+    handleMission();
+}
+
+void RobotCore::finishCompetition()
+{
+    decisionEngine.finish();
+    missionActive = false;
+    motionController.stopGait();
+    currentMode = RobotMode::IDLE;
+}
+
+void RobotCore::setCompetitionInput(const CompetitionInputs& inputs)
+{
+    decisionEngine.setCompetitionInput(inputs);
+    if (decisionEngine.phase() != CompetitionPhase::IDLE) {
+        missionActive = true;
+    }
+}
+
+String RobotCore::phaseName() const
+{
+    return decisionEngine.phaseName();
+}
+
 void RobotCore::completeRescue()
 {
     if (!missionActive) {
