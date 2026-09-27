@@ -27,13 +27,21 @@ unsigned long lastMotionMs = 0;
 
 String jsonValue(const String& json, const String& key)
 {
-    const String needle = String(""") + key + "":"";
-    int start = json.indexOf(needle);
-    if (start < 0) return "";
-    start += needle.length();
-    int end = json.indexOf(""", start);
-    if (end < 0) return "";
-    return json.substring(start, end);
+    const String needle = String("\"") + key + "\":\"";
+    const int startIndex = json.indexOf(needle);
+
+    if (startIndex < 0) {
+        return "";
+    }
+
+    const int valueStart = startIndex + needle.length();
+    const int valueEnd = json.indexOf("\"", valueStart);
+
+    if (valueEnd < 0) {
+        return "";
+    }
+
+    return json.substring(valueStart, valueEnd);
 }
 
 void processJsonPacket(const String& packet)
@@ -45,7 +53,7 @@ void processJsonPacket(const String& packet)
         safetyStopLatched = true;
         motionSafety.emergencyStop();
         motionController.disable();
-        Serial.println("{"type":"ack","command":"STOP","ok":true}");
+        Serial.println("{\"type\":\"ack\",\"command\":\"STOP\",\"ok\":true}");
         return;
     }
 
@@ -53,51 +61,80 @@ void processJsonPacket(const String& packet)
         motionSafety.resume();
         safetyStopLatched = false;
         motionController.enable();
-        Serial.println("{"type":"ack","command":"RESUME","ok":true}");
+        Serial.println("{\"type\":\"ack\",\"command\":\"RESUME\",\"ok\":true}");
         return;
     }
 
     if (command == "ENABLE") {
         if (safetyStopLatched || !motionSafety.allowed()) {
-            Serial.println("{"type":"error","error":"SAFETY_BLOCK"}");
+            Serial.println("{\"type\":\"error\",\"error\":\"SAFETY_BLOCK\"}");
             return;
         }
+
         motionController.enable();
         motionSafety.noteMotionCommand();
-        Serial.println("{"type":"ack","command":"ENABLE"}");
+        Serial.println("{\"type\":\"ack\",\"command\":\"ENABLE\",\"ok\":true}");
         return;
     }
 
     if (command == "CENTER") {
         if (safetyStopLatched || !motionSafety.allowed()) {
-            Serial.println("{"type":"ack","command":"CENTER","ok":false,"error":"E_STOP"}");
+            Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":false,\"error\":\"E_STOP\"}");
             return;
         }
+
         motionController.center();
-        Serial.println("{"type":"ack","command":"CENTER","ok":true}");
+        motionSafety.noteMotionCommand();
+        Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":true}");
         return;
     }
 
     if (command == "STAND") {
         if (safetyStopLatched || !motionSafety.allowed()) {
-            Serial.println("{"type":"ack","command":"STAND","ok":false,"error":"E_STOP"}");
+            Serial.println("{\"type\":\"ack\",\"command\":\"STAND\",\"ok\":false,\"error\":\"E_STOP\"}");
             return;
         }
+
         motionController.stand();
-        Serial.println("{"type":"ack","command":"STAND","ok":true}");
+        motionSafety.noteMotionCommand();
+        Serial.println("{\"type\":\"ack\",\"command\":\"STAND\",\"ok\":true}");
         return;
     }
 
     if (command == "MISSION") {
         String mode = jsonValue(packet, "mode");
+
         if (robotCore.setMode(mode)) {
             Serial.printf(
-                "{\"type\":\"ack\",\"command\":\"MISSION\",\"ok\":true,\"mode\":\"%s\"}\\n",
+                "{\"type\":\"ack\",\"command\":\"MISSION\",\"ok\":true,\"mode\":\"%s\"}\n",
                 robotCore.modeName().c_str()
             );
         } else {
             Serial.println("{\"type\":\"ack\",\"command\":\"MISSION\",\"ok\":false}");
         }
+
+        return;
+    }
+
+    if (command == "GOAL") {
+        String goal = jsonValue(packet, "goal");
+
+        if (robotCore.setGoal(goal)) {
+            Serial.printf(
+                "{\"type\":\"ack\",\"command\":\"GOAL\",\"ok\":true,\"goal\":\"%s\",\"action\":\"%s\"}\n",
+                robotCore.goalName().c_str(),
+                robotCore.actionName().c_str()
+            );
+        } else {
+            Serial.println("{\"type\":\"ack\",\"command\":\"GOAL\",\"ok\":false}");
+        }
+
+        return;
+    }
+
+    if (command == "RESCUE_DONE") {
+        robotCore.completeRescue();
+        Serial.println("{\"type\":\"ack\",\"command\":\"RESCUE_DONE\",\"ok\":true}");
         return;
     }
 
@@ -106,7 +143,7 @@ void processJsonPacket(const String& packet)
         mode.toUpperCase();
 
         if (safetyStopLatched || !motionSafety.allowed()) {
-            Serial.println("{"type":"ack","command":"GAIT","ok":false,"error":"E_STOP"}");
+            Serial.println("{\"type\":\"ack\",\"command\":\"GAIT\",\"ok\":false,\"error\":\"E_STOP\"}");
             return;
         }
 
@@ -116,36 +153,44 @@ void processJsonPacket(const String& packet)
             mode != "SEARCH" &&
             mode != "RESCUE"
         ) {
-            Serial.println("{"type":"ack","command":"GAIT","ok":false,"error":"BAD_MODE"}");
+            Serial.println("{\"type\":\"ack\",\"command\":\"GAIT\",\"ok\":false,\"error\":\"BAD_MODE\"}");
             return;
         }
 
         motionController.setGait(mode);
         motionSafety.noteMotionCommand();
+
         Serial.printf(
-            "{"type":"ack","command":"GAIT","ok":true,"mode":"%s"}\n",
+            "{\"type\":\"ack\",\"command\":\"GAIT\",\"ok\":true,\"mode\":\"%s\"}\n",
             mode.c_str()
         );
+
         return;
     }
 
-    Serial.println("{"type":"error","error":"UNKNOWN_COMMAND"}");
+    Serial.println("{\"type\":\"error\",\"error\":\"UNKNOWN_COMMAND\"}");
 }
 
 void emitTelemetry()
 {
-    if (millis() - lastTelemetryMs < 1000)
+    if (millis() - lastTelemetryMs < 1000) {
         return;
+    }
 
     lastTelemetryMs = millis();
 
     HardwareStatus status = {
-        pca9685.available(), false, false, false, false, false,
+        pca9685.available(),
+        false,
+        false,
+        false,
+        false,
+        false,
         motionSafety.allowed()
     };
 
     Serial.printf(
-        "{"type":"telemetry","firmware":"%s","safety_stop":%s,"gait":"%s","phase":%.3f,"moving":%s,"hardware":%s}\n",
+        "{\"type\":\"telemetry\",\"firmware\":\"%s\",\"safety_stop\":%s,\"gait\":\"%s\",\"phase\":%.3f,\"moving\":%s,\"hardware\":%s}\n",
         FIRMWARE_VERSION,
         safetyStopLatched ? "true" : "false",
         motionController.gait().mode(),
@@ -155,9 +200,12 @@ void emitTelemetry()
     );
 
     const RobotCoreStatus core = robotCore.status();
+
     Serial.printf(
-        "{\"type\":\"core\",\"mode\":\"%s\",\"active\":%s,\"person\":%s,\"thermal\":%s,\"healthy\":%s,\"cycle\":%lu}\n",
+        "{\"type\":\"core\",\"mode\":\"%s\",\"goal\":\"%s\",\"action\":\"%s\",\"active\":%s,\"person\":%s,\"thermal\":%s,\"healthy\":%s,\"cycle\":%lu}\n",
         robotCore.modeName().c_str(),
+        robotCore.goalName().c_str(),
+        robotCore.actionName().c_str(),
         core.missionActive ? "true" : "false",
         core.personDetected ? "true" : "false",
         core.thermalSignature ? "true" : "false",
@@ -170,10 +218,21 @@ void printHelp()
 {
     Serial.println();
     Serial.println("================================================");
-    Serial.println("             AI QUADRUPED ROBOT");
+    Serial.println("          AUTONOMOUS QUADRUPED ROBOT");
     Serial.println("================================================");
     Serial.println("SYSTEM");
     Serial.println("  help | status | center | stand | enable | disable | debug");
+    Serial.println("  stop | resume");
+    Serial.println();
+    Serial.println("AUTONOMY");
+    Serial.println("  goal RESCUE");
+    Serial.println("  goal PATROL");
+    Serial.println("  goal RETURN_HOME");
+    Serial.println("  goal DEMO");
+    Serial.println("  found | rescue_done | home | ai_status | reset_mission");
+    Serial.println();
+    Serial.println("MISSION");
+    Serial.println("  mission <IDLE|PATROL|SEARCH|RESCUE|RETURN_HOME>");
     Serial.println();
     Serial.println("SERVO");
     Serial.println("  servo <channel> <angle>");
@@ -192,8 +251,6 @@ void printHelp()
     Serial.println();
     Serial.println("GAIT");
     Serial.println("  gait <WALK|SLOW_WALK|SEARCH|RESCUE>");
-    Serial.println("  mission <IDLE|PATROL|SEARCH|RESCUE|RETURN_HOME>");
-    Serial.println("  found | home | mission_status | reset_mission");
     Serial.println("================================================");
     Serial.println();
 }
@@ -207,8 +264,9 @@ void processCommand(String command)
         return;
     }
 
-    if (command.length() == 0)
+    if (command.length() == 0) {
         return;
+    }
 
     Serial.printf("[CMD] %s\n", command.c_str());
 
@@ -222,10 +280,13 @@ void processCommand(String command)
         return;
     }
 
-    if (command == "mission_status") {
+    if (command == "mission_status" || command == "ai_status") {
         const RobotCoreStatus state = robotCore.status();
+
         Serial.printf(
-            "[CORE] mode=%s active=%s person=%s thermal=%s healthy=%s cycle=%lu\\n",
+            "[AI] goal=%s action=%s mode=%s active=%s person=%s thermal=%s healthy=%s cycle=%lu\n",
+            robotCore.goalName().c_str(),
+            robotCore.actionName().c_str(),
             robotCore.modeName().c_str(),
             state.missionActive ? "true" : "false",
             state.personDetected ? "true" : "false",
@@ -233,37 +294,66 @@ void processCommand(String command)
             !state.fault ? "true" : "false",
             static_cast<unsigned long>(state.cycle)
         );
+
         return;
     }
 
     if (command == "reset_mission") {
         robotCore.resetMission();
-        Serial.println("[CORE] mission reset");
+        Serial.println("[AI] mission reset");
         return;
     }
 
     if (command == "found") {
-        if (robotCore.reportPerson())
-            Serial.println("[CORE] person detected -> RESCUE");
-        else
-            Serial.println("[CORE] person report rejected");
+        if (robotCore.reportPerson()) {
+            Serial.println("[AI] target detected -> RESCUE");
+        } else {
+            Serial.println("[AI] target report rejected");
+        }
+
+        return;
+    }
+
+    if (command == "rescue_done") {
+        robotCore.completeRescue();
+        Serial.println("[AI] rescue complete -> next decision");
         return;
     }
 
     if (command == "home") {
         robotCore.returnHome();
-        Serial.println("[CORE] RETURN_HOME requested");
+        Serial.println("[AI] RETURN_HOME requested");
+        return;
+    }
+
+    if (command.startsWith("goal ")) {
+        String goal = command.substring(5);
+        goal.trim();
+
+        if (robotCore.setGoal(goal)) {
+            Serial.printf(
+                "[AI] goal=%s action=%s mode=%s\n",
+                robotCore.goalName().c_str(),
+                robotCore.actionName().c_str(),
+                robotCore.modeName().c_str()
+            );
+        } else {
+            Serial.println("[AI] goal rejected");
+        }
+
         return;
     }
 
     if (command.startsWith("mission ")) {
         String mode = command.substring(8);
         mode.trim();
+
         if (robotCore.setMode(mode)) {
-            Serial.printf("[CORE] mode -> %s\\n", robotCore.modeName().c_str());
+            Serial.printf("[CORE] mode -> %s\n", robotCore.modeName().c_str());
         } else {
             Serial.println("[CORE] mission mode rejected");
         }
+
         return;
     }
 
@@ -277,6 +367,7 @@ void processCommand(String command)
             Serial.println("[SAFETY] E-STOP active");
             return;
         }
+
         motionController.center();
         motionSafety.noteMotionCommand();
         return;
@@ -287,6 +378,7 @@ void processCommand(String command)
             Serial.println("[SAFETY] E-STOP active");
             return;
         }
+
         motionController.stand();
         motionSafety.noteMotionCommand();
         return;
@@ -297,6 +389,7 @@ void processCommand(String command)
             Serial.println("[SAFETY] enable blocked");
             return;
         }
+
         motionController.enable();
         motionSafety.noteMotionCommand();
         return;
@@ -323,7 +416,12 @@ void processCommand(String command)
         return;
     }
 
-    int channel, angle, offset, invert, minAngle, maxAngle;
+    int channel;
+    int angle;
+    int offset;
+    int invert;
+    int minAngle;
+    int maxAngle;
 
     if (command == "cal") {
         motionController.printCalibration();
@@ -355,19 +453,24 @@ void processCommand(String command)
             Serial.println("[SAFETY] E-STOP active");
             return;
         }
+
         motionController.setServo(channel, angle);
         return;
     }
 
     char name[4];
-    int coxa, femur, tibia;
+    int coxa;
+    int femur;
+    int tibia;
 
     if (sscanf(command.c_str(), "leg %3s %d %d %d", name, &coxa, &femur, &tibia) == 4) {
         motionController.setLeg(String(name), coxa, femur, tibia);
         return;
     }
 
-    float x, y, z;
+    float x;
+    float y;
+    float z;
 
     if (sscanf(command.c_str(), "ik %f %f %f", &x, &y, &z) == 3) {
         motionController.testIK(x, y, z);
@@ -407,7 +510,7 @@ void setup()
 
     Serial.println();
     Serial.println("================================================");
-    Serial.println("             AI QUADRUPED ROBOT");
+    Serial.println("          AUTONOMOUS QUADRUPED ROBOT");
     Serial.println("================================================");
     Serial.printf("Firmware : %s\n", FIRMWARE_VERSION);
     Serial.printf("Target   : %s\n", ROBOT_NAME);
@@ -425,6 +528,7 @@ void setup()
     lastMotionMs = millis();
 
     Serial.println("[BOOT] Firmware READY");
+    Serial.println("[BOOT] Offline decision engine READY");
     Serial.println("[BOOT] Type 'help' for commands");
     Serial.println();
 }
@@ -458,8 +562,7 @@ void loop()
     while (Serial.available()) {
         const char c = static_cast<char>(Serial.read());
 
-        if (c == '
-' || c == '') {
+        if (c == '\n' || c == '\r') {
             if (serialBuffer.length() > 0) {
                 processCommand(serialBuffer);
                 serialBuffer = "";
