@@ -6,6 +6,74 @@
 MotionController motionController;
 
 String serialBuffer;
+bool safetyStopLatched = false;
+unsigned long lastTelemetryMs = 0;
+
+String jsonValue(const String& json, const String& key)
+{
+    const String needle = String("\"") + key + "\":\"";
+    int start = json.indexOf(needle);
+    if (start < 0) return "";
+    start += needle.length();
+    int end = json.indexOf("\"", start);
+    if (end < 0) return "";
+    return json.substring(start, end);
+}
+
+void processJsonPacket(const String& packet)
+{
+    String command = jsonValue(packet, "command");
+    command.toUpperCase();
+
+    if (command == "STOP") {
+        safetyStopLatched = true;
+        motionController.disable();
+        Serial.println("{\"type\":\"ack\",\"command\":\"STOP\",\"ok\":true}");
+        return;
+    }
+
+    if (command == "RESUME") {
+        safetyStopLatched = false;
+        motionController.enable();
+        Serial.println("{\"type\":\"ack\",\"command\":\"RESUME\",\"ok\":true}");
+        return;
+    }
+
+    if (command == "CENTER") {
+        if (safetyStopLatched) {
+            Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":false,\"error\":\"E_STOP\"}");
+            return;
+        }
+        motionController.center();
+        Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":true}");
+        return;
+    }
+
+    if (command == "STAND") {
+        if (safetyStopLatched) {
+            Serial.println("{\"type\":\"ack\",\"command\":\"STAND\",\"ok\":false,\"error\":\"E_STOP\"}");
+            return;
+        }
+        motionController.stand();
+        Serial.println("{\"type\":\"ack\",\"command\":\"STAND\",\"ok\":true}");
+        return;
+    }
+
+    Serial.println("{\"type\":\"error\",\"error\":\"UNKNOWN_COMMAND\"}");
+}
+
+void emitTelemetry()
+{
+    if (millis() - lastTelemetryMs < 1000)
+        return;
+
+    lastTelemetryMs = millis();
+    Serial.printf(
+        "{\"type\":\"telemetry\",\"firmware\":\"%s\",\"safety_stop\":%s,\"hardware_mode\":\"SIMULATION\"}\n",
+        FIRMWARE_VERSION,
+        safetyStopLatched ? "true" : "false"
+    );
+}
 
 void printHelp()
 {
@@ -54,6 +122,11 @@ void printHelp()
 void processCommand(String command)
 {
     command.trim();
+
+    if (command.startsWith("{")) {
+        processJsonPacket(command);
+        return;
+    }
 
     if (command.length() == 0)
         return;
@@ -326,6 +399,8 @@ void setup()
 
 void loop()
 {
+    emitTelemetry();
+
     while (Serial.available()) {
 
         const char c =
