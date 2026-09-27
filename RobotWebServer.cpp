@@ -43,7 +43,7 @@ String RobotWebServer::jsonEscape(const String& value) {
     String out;
     for (size_t i = 0; i < value.length(); ++i) {
         const char c = value[i];
-        if (c == '"') out += "\\"";
+        if (c == '"') out += "\\\"";
         else if (c == '\\') out += "\\\\";
         else if (c == '\n') out += "\\n";
         else if (c == '\r') out += "\\r";
