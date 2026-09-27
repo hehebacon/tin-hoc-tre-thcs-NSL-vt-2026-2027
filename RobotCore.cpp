@@ -28,6 +28,7 @@ void RobotCore::begin()
     coreFault = false;
     cycle = 0;
     motionController.stopGait();
+    decisionEngine.begin();
 }
 
 void RobotCore::update(float dt)
@@ -93,54 +94,58 @@ void RobotCore::evaluateSensors()
 
 void RobotCore::handleMission()
 {
+    const DecisionInputs inputs = {
+        !sensorFault && !coreFault,
+        personDetected,
+        thermalSignature,
+        decisionEngine.action() == DecisionAction::RETURN_HOME && decisionEngine.goal() == DecisionGoal::RESCUE
+    };
+
+    const DecisionOutput decision = decisionEngine.update(inputs);
+
     if (!missionActive) {
         motionController.stopGait();
         return;
     }
 
-    switch (currentMode) {
-        case RobotMode::PATROL:
+    switch (decision.action) {
+        case DecisionAction::SEARCH:
+            currentMode = RobotMode::SEARCH;
+            motionController.setGait("SEARCH");
+            break;
+
+        case DecisionAction::APPROACH:
+            currentMode = RobotMode::RESCUE;
             motionController.setGait("SLOW_WALK");
             break;
 
-        case RobotMode::SEARCH:
-            motionController.setGait("SEARCH");
-            if (personDetected || thermalSignature) {
-                currentMode = RobotMode::RESCUE;
-            }
-            break;
-
-        case RobotMode::RESCUE:
+        case DecisionAction::RESCUE:
+            currentMode = RobotMode::RESCUE;
             motionController.setGait("RESCUE");
-            if (personDetected || thermalSignature) {
-                personDetected = true;
-            }
             break;
 
-        case RobotMode::RETURN_HOME:
-        case RobotMode::DELIVER:
-        case RobotMode::RECHARGE:
+        case DecisionAction::RETURN_HOME:
+            currentMode = RobotMode::RETURN_HOME;
             motionController.setGait("SLOW_WALK");
             break;
 
-        case RobotMode::FOLLOW:
-        case RobotMode::AVOID:
-        case RobotMode::INSPECT:
-            motionController.setGait("SEARCH");
+        case DecisionAction::PATROL:
+            currentMode = RobotMode::PATROL;
+            motionController.setGait("SLOW_WALK");
             break;
 
-        case RobotMode::EXPLORE:
-        case RobotMode::DEMO:
+        case DecisionAction::DEMO:
+            currentMode = RobotMode::DEMO;
             motionController.setGait("WALK");
             break;
 
-        case RobotMode::CALIBRATION:
-        case RobotMode::CLIMB:
-        case RobotMode::IDLE:
-        case RobotMode::FAULT:
+        case DecisionAction::FAULT:
+            enterFault();
+            break;
+
+        case DecisionAction::IDLE:
         default:
-            // CLIMB is intentionally a motion-capability placeholder until
-            // a verified wall-climbing hardware driver is installed.
+            currentMode = RobotMode::IDLE;
             motionController.stopGait();
             break;
     }
@@ -205,10 +210,45 @@ void RobotCore::applyMode()
     }
 }
 
+bool RobotCore::setGoal(const String& goal)
+{
+    if (coreFault || !motionSafety.allowed()) {
+        return false;
+    }
+
+    if (!decisionEngine.setGoal(goal)) {
+        return false;
+    }
+
+    missionActive = decisionEngine.goal() != DecisionGoal::NONE;
+
+    if (!missionActive) {
+        currentMode = RobotMode::IDLE;
+        motionController.stopGait();
+        return true;
+    }
+
+    // Let the decision engine choose the first action instead of forcing
+    // a pre-scripted gait.
+    handleMission();
+    return true;
+}
+
+void RobotCore::completeRescue()
+{
+    if (!missionActive) {
+        return;
+    }
+
+    decisionEngine.rescueCompleted();
+    handleMission();
+}
+
 void RobotCore::stop()
 {
     missionActive = false;
     currentMode = RobotMode::IDLE;
+    decisionEngine.clearGoal();
     motionController.stopGait();
 }
 
@@ -246,6 +286,7 @@ bool RobotCore::reportPerson()
     }
 
     personDetected = true;
+    decisionEngine.targetDetected();
     currentMode = RobotMode::RESCUE;
     missionActive = true;
     motionController.setGait("RESCUE");
@@ -305,6 +346,16 @@ String RobotCore::modeName() const
         case RobotMode::IDLE:
         default: return "IDLE";
     }
+}
+
+String RobotCore::goalName() const
+{
+    return decisionEngine.goalName();
+}
+
+String RobotCore::actionName() const
+{
+    return decisionEngine.actionName();
 }
 
 RobotMode RobotCore::parseMode(const String& mode)
