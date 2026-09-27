@@ -57,8 +57,8 @@ void RobotCore::evaluateSensors()
     const ImuReading imuReading = imuInterface.read();
     const EnvironmentalReading envReading = environmentalSensors.read();
 
-    personDetected = cameraReading.valid && cameraReading.personDetected;
-    thermalSignature = thermalReading.valid && thermalReading.personSignature;
+    personDetected = personDetected || (cameraReading.valid && cameraReading.personDetected);
+    thermalSignature = thermalSignature || (thermalReading.valid && thermalReading.personSignature);
 
     // Invalid sensor data is not a fault by itself: interfaces may be optional.
     // A real hardware driver should report an explicit valid reading once present.
@@ -135,8 +135,12 @@ bool RobotCore::setMode(const String& mode)
         return false;
     }
 
-    const RobotMode next = parseMode(mode);
-    if (next == RobotMode::IDLE && mode != "IDLE") {
+    String normalized = mode;
+    normalized.trim();
+    normalized.toUpperCase();
+
+    const RobotMode next = parseMode(normalized);
+    if (next == RobotMode::IDLE && normalized != "IDLE") {
         return false;
     }
 
