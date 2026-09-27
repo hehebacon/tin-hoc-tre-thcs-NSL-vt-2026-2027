@@ -344,7 +344,19 @@ void RobotCore::finishCompetition()
 
 void RobotCore::setCompetitionInput(const CompetitionInputs& inputs)
 {
-    decisionEngine.setCompetitionInput(inputs);
+    WorldState world = perception.state();
+    world.sensorsHealthy = inputs.sensorsHealthy;
+    world.line = inputs.intersectionDetected ? LineState::INTERSECTION :
+                 (inputs.lineDetected ? LineState::CENTER : LineState::LOST);
+    world.obstacleDetected = inputs.obstacleDetected;
+    world.targetDetected = inputs.targetDetected;
+    world.targetPicked = inputs.targetPicked;
+    world.targetPlaced = inputs.targetPlaced;
+    world.allAutonomousTasksDone = inputs.allAutonomousTasksDone;
+    world.endGameReady = inputs.endGameReady;
+    world.homeDetected = inputs.homeDetected;
+    setPerceptionInput(world);
+
     if (decisionEngine.phase() != CompetitionPhase::IDLE) {
         missionActive = true;
     }
