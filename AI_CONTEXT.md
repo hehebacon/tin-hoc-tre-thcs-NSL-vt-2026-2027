@@ -320,3 +320,8 @@ These are future directions unless the repository shows otherwise.
 
 This is a 12-DOF ESP32/PCA9685 quadruped rescue robot with modular mission control, gait, inverse kinematics, calibration, safety, and sensor layers. It is being developed as a real Tin học trẻ competition prototype. Keep simulation separate from physical capability, never invent hardware, never bypass safety, and prefer practical complete-file changes.
 
+
+
+## Latest extension status
+
+v0.4.0 adds Perception, WorldState, color/line sensor adapters, Gemini OnlineAIClient, AP+STA Wi-Fi, and a web dashboard that reports perception and online AI status. No credentials are committed.
