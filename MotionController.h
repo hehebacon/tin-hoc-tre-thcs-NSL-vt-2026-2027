@@ -35,6 +35,7 @@ public:
 
     bool solveIK(float x, float y, float z, JointAngles& result) const;
     void testIK(float x, float y, float z) const;
+    bool validateFootTarget(float x, float y, float z) const;
 
     void center();
     void stand();
