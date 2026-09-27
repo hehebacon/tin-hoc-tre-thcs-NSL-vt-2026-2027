@@ -2,7 +2,6 @@
 #include <Arduino.h>
 
 enum class DetectedColor { NONE, RED, GREEN, BLUE, YELLOW, BLACK, WHITE, UNKNOWN };
-
 enum class LineState { LOST, LEFT, CENTER, RIGHT, INTERSECTION };
 
 struct ColorObservation {
@@ -11,8 +10,15 @@ struct ColorObservation {
     bool valid = false;
 };
 
+// Compatibility wrapper: keeps .color/.confidence/.valid while behaving like DetectedColor.
+struct TargetColorState {
+    DetectedColor color = DetectedColor::NONE;
+    float confidence = 0.0f;
+    bool valid = false;
+    operator DetectedColor() const { return color; }
+};
+
 struct WorldState {
-    // Canonical competition API.
     bool lineDetected = false;
     bool intersectionDetected = false;
     bool obstacleDetected = false;
@@ -21,17 +27,16 @@ struct WorldState {
     bool targetPicked = false;
     bool targetClassified = false;
     bool targetPlaced = false;
-    DetectedColor targetColor = DetectedColor::NONE;
+    TargetColorState targetColor{};
     float colorConfidence = 0.0f;
     bool homeDetected = false;
     bool endGameReady = false;
     bool allAutonomousTasksDone = false;
     bool sensorsHealthy = true;
 
-    // Compatibility fields for existing simulator/web code.
+    // Legacy aliases retained during the API migration.
     LineState line = LineState::LOST;
     float obstacleDistanceCm = 999.0f;
-    ColorObservation targetColorObservation{};
 };
 
 class PerceptionSystem {
@@ -62,7 +67,7 @@ public:
     void setHealthy(bool value);
 
     static const char* colorName(DetectedColor color);
-    static const char* colorName(const ColorObservation& observation) { return colorName(observation.color); }
+    static const char* colorName(const TargetColorState& color) { return colorName(color.color); }
     static const char* lineName(LineState line);
     static LineState parseLine(const String& value);
     static DetectedColor parseColor(const String& value);
