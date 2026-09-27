@@ -16,6 +16,10 @@ Supported safety commands:
 - STOP
 - RESUME
 - RETURN_HOME
+- CENTER
+- STAND
+
+The ESP32 firmware also emits a periodic telemetry packet and keeps a local E-STOP latch. The Python side must treat the ESP32 safety state as authoritative for physical motion.
 
 The Python bridge is optional. The simulator and dashboard work without an ESP32.
 
