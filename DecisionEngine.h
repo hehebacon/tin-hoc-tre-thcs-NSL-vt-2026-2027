@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-enum class DecisionGoal {
+enum class CompetitionPhase { IDLE, AUTONOMOUS, DRIVER_CONTROL, END_GAME, FINISHED };\n\nenum class DecisionGoal {
     NONE,
     RESCUE,
     PATROL,
@@ -28,7 +28,7 @@ struct DecisionInputs {
     bool rescueComplete;
 };
 
-struct DecisionOutput {
+struct CompetitionInputs { bool sensorsHealthy=true; bool lineDetected=false; bool intersectionDetected=false; bool obstacleDetected=false; bool targetDetected=false; bool targetPicked=false; bool targetPlaced=false; bool allAutonomousTasksDone=false; bool endGameReady=false; bool homeDetected=false; };\n\nstruct DecisionOutput {
     DecisionGoal goal;
     DecisionAction action;
     bool missionActive;
@@ -41,7 +41,7 @@ public:
     bool setGoal(const String& goal);
     void clearGoal();
     void targetDetected();
-    void rescueCompleted();
+    void rescueCompleted();\n    void startAutonomous();\n    void startDriverControl();\n    void startEndGame();\n    void finish();\n    void setCompetitionInput(const CompetitionInputs& inputs);\n    DecisionOutput updateCompetition();\n    CompetitionPhase phase() const;\n    String phaseName() const;
 
     DecisionOutput update(const DecisionInputs& inputs);
 
@@ -52,7 +52,7 @@ public:
 
 private:
     DecisionGoal currentGoal = DecisionGoal::NONE;
-    DecisionAction currentAction = DecisionAction::IDLE;
+    DecisionAction currentAction = DecisionAction::IDLE;\n    CompetitionPhase currentPhase = CompetitionPhase::IDLE;\n    CompetitionInputs competitionInputs{};
     bool targetLatched = false;
     bool rescueDone = false;
 
