@@ -118,12 +118,29 @@ void RobotCore::handleMission()
             break;
 
         case RobotMode::RETURN_HOME:
+        case RobotMode::DELIVER:
+        case RobotMode::RECHARGE:
             motionController.setGait("SLOW_WALK");
             break;
 
+        case RobotMode::FOLLOW:
+        case RobotMode::AVOID:
+        case RobotMode::INSPECT:
+            motionController.setGait("SEARCH");
+            break;
+
+        case RobotMode::EXPLORE:
+        case RobotMode::DEMO:
+            motionController.setGait("WALK");
+            break;
+
+        case RobotMode::CALIBRATION:
+        case RobotMode::CLIMB:
         case RobotMode::IDLE:
         case RobotMode::FAULT:
         default:
+            // CLIMB is intentionally a motion-capability placeholder until
+            // a verified wall-climbing hardware driver is installed.
             motionController.stopGait();
             break;
     }
@@ -160,17 +177,26 @@ void RobotCore::applyMode()
 {
     switch (currentMode) {
         case RobotMode::PATROL:
+        case RobotMode::RETURN_HOME:
+        case RobotMode::DELIVER:
+        case RobotMode::RECHARGE:
             motionController.setGait("SLOW_WALK");
             break;
         case RobotMode::SEARCH:
+        case RobotMode::FOLLOW:
+        case RobotMode::AVOID:
+        case RobotMode::INSPECT:
             motionController.setGait("SEARCH");
             break;
         case RobotMode::RESCUE:
             motionController.setGait("RESCUE");
             break;
-        case RobotMode::RETURN_HOME:
-            motionController.setGait("SLOW_WALK");
+        case RobotMode::EXPLORE:
+        case RobotMode::DEMO:
+            motionController.setGait("WALK");
             break;
+        case RobotMode::CALIBRATION:
+        case RobotMode::CLIMB:
         case RobotMode::IDLE:
         case RobotMode::FAULT:
         default:
@@ -266,6 +292,15 @@ String RobotCore::modeName() const
         case RobotMode::SEARCH: return "SEARCH";
         case RobotMode::RESCUE: return "RESCUE";
         case RobotMode::RETURN_HOME: return "RETURN_HOME";
+        case RobotMode::FOLLOW: return "FOLLOW";
+        case RobotMode::AVOID: return "AVOID";
+        case RobotMode::EXPLORE: return "EXPLORE";
+        case RobotMode::INSPECT: return "INSPECT";
+        case RobotMode::DELIVER: return "DELIVER";
+        case RobotMode::RECHARGE: return "RECHARGE";
+        case RobotMode::CALIBRATION: return "CALIBRATION";
+        case RobotMode::DEMO: return "DEMO";
+        case RobotMode::CLIMB: return "CLIMB";
         case RobotMode::FAULT: return "FAULT";
         case RobotMode::IDLE:
         default: return "IDLE";
@@ -281,6 +316,15 @@ RobotMode RobotCore::parseMode(const String& mode)
     if (value == "SEARCH") return RobotMode::SEARCH;
     if (value == "RESCUE") return RobotMode::RESCUE;
     if (value == "RETURN_HOME") return RobotMode::RETURN_HOME;
+    if (value == "FOLLOW") return RobotMode::FOLLOW;
+    if (value == "AVOID") return RobotMode::AVOID;
+    if (value == "EXPLORE") return RobotMode::EXPLORE;
+    if (value == "INSPECT") return RobotMode::INSPECT;
+    if (value == "DELIVER") return RobotMode::DELIVER;
+    if (value == "RECHARGE") return RobotMode::RECHARGE;
+    if (value == "CALIBRATION") return RobotMode::CALIBRATION;
+    if (value == "DEMO") return RobotMode::DEMO;
+    if (value == "CLIMB") return RobotMode::CLIMB;
     if (value == "IDLE") return RobotMode::IDLE;
 
     return RobotMode::IDLE;
