@@ -11,6 +11,8 @@ from thermal import ThermalSimulator
 from telemetry import TelemetrySimulator
 from state_machine import StateMachine
 from mission import MissionManager
+from safety import SafetyManager
+from gait import GaitPlanner
 
 core = RescueCore(MAP_W, MAP_H, OBSTACLES, BASE, VICTIM)
 sensors = SensorSimulator(VICTIM)
@@ -33,6 +35,8 @@ def snapshot():
             "mode": core.mode,
             "state": state,
             "emergency_stop": core.emergency_stop,
+            "safety": safety.snapshot(),
+            "gait": {k: vars(v) for k, v in gait.update(moving=bool(core.path)).items()},
             "found": core.found,
             "searching": core.searching,
             "mission": {
@@ -87,7 +91,21 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         with lock:
-            if path == "/api/mode":
+            if path == "/api/safety":
+                action = str(data.get("action", "")).upper()
+                if action == "STOP":
+                    safety.stop("operator")
+                    core.stop()
+                    mission.add("EMERGENCY_STOP")
+                elif action == "RESUME":
+                    safety.resume()
+                    core.resume()
+                    mission.add("MOTION_RESUMED")
+                else:
+                    self.send_json({"error": "invalid safety action", "actions": ["STOP", "RESUME"]}, 400)
+                    return
+
+            elif path == "/api/mode":
                 mode = data.get("mode")
                 if not core.set_mode(mode):
                     self.send_json({"error": "invalid mode", "modes": core.MODES}, 400)
@@ -95,6 +113,10 @@ class Handler(BaseHTTPRequestHandler):
                 mission.add("MODE_CHANGED", {"mode": mode})
 
             elif path == "/api/mission/start":
+                allowed, reason = safety.allow_motion(telemetry.battery)
+                if not allowed:
+                    self.send_json({"error": reason}, 409)
+                    return
                 mission.start(data.get("name", "SEARCH & RESCUE"))
                 core.set_mode("RESCUE")
 
@@ -110,12 +132,15 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/command":
                 command = str(data.get("command", "")).upper()
                 if command == "STOP":
+                    safety.stop("operator")
                     core.stop()
                     mission.add("EMERGENCY_STOP")
                 elif command == "RESUME":
+                    safety.resume()
                     core.resume()
                     mission.add("MOTION_RESUMED")
                 elif command == "RETURN_HOME":
+                    safety.resume()
                     core.return_home()
                     mission.add("RETURN_HOME")
                 else:
