@@ -119,10 +119,12 @@ def hip_bracket():
         Box(outer_w, outer_l, outer_h,
             align=(Align.CENTER, Align.CENTER, Align.MIN))
 
-        # Servo cavity: the servo is captured inside the shell.
-        with BuildPart(mode=Mode.SUBTRACT):
-            Box(W + 2 * CLR, L + 2 * CLR, H + 1.0,
-                align=(Align.CENTER, Align.CENTER, Align.MIN))
+        # Servo cavity: use a slightly inset cutter so the OCC boolean
+        # always has a valid overlapping solid.
+        with Locations(Pos(0, 0, -0.5)):
+            Box(W + 2 * CLR, L + 2 * CLR, H + 2.0,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
+                mode=Mode.SUBTRACT)
 
         # Dragon shoulder armor, integrated into the housing.
         with BuildPart(mode=Mode.ADD):
@@ -133,13 +135,18 @@ def hip_bracket():
                 Sphere(radius=12.0)
 
         # Recessed mounting channels. Fastener heads sit below the skin.
+        # The cutters deliberately start below the top surface and extend
+        # beyond it, avoiding zero-thickness boolean faces.
         for x in (-outer_w * 0.30, outer_w * 0.30):
-            with BuildPart(mode=Mode.SUBTRACT):
-                with Locations(Pos(x, outer_l * 0.18, outer_h - 2.0)):
-                    Cylinder(radius=M3_R, height=outer_h + 4)
-                with Locations(Pos(x, outer_l * 0.18, outer_h - P["fastener_depth"] / 2)):
-                    Cylinder(radius=P["fastener_head"] / 2,
-                             height=P["fastener_depth"] + 0.4)
+            with Locations(Pos(x, outer_l * 0.18, -0.5)):
+                Cylinder(radius=M3_R, height=outer_h + 1.0,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN),
+                         mode=Mode.SUBTRACT)
+            with Locations(Pos(x, outer_l * 0.18, outer_h - P["fastener_depth"] - 0.2)):
+                Cylinder(radius=P["fastener_head"] / 2,
+                         height=P["fastener_depth"] + 0.7,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN),
+                         mode=Mode.SUBTRACT)
 
         # Hidden-side pivot boss; screw access is from the inner face.
         with BuildPart(mode=Mode.ADD):
@@ -147,10 +154,11 @@ def hip_bracket():
                 Cylinder(radius=16.0, height=outer_w * 0.70,
                          rotation=(0, 90, 0))
 
-        with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(Pos(0, 0, outer_h * 0.50)):
-                Cylinder(radius=PIVOT_R, height=outer_w + 6,
-                         rotation=(0, 90, 0))
+        with Locations(Pos(0, 0, outer_h * 0.50)):
+            Cylinder(radius=PIVOT_R, height=outer_w + 8,
+                     rotation=(0, 90, 0),
+                     align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                     mode=Mode.SUBTRACT)
 
     p.part.label = "DRAGON_HIP_HIDDEN_FASTENER_PRINT"
     return p.part
