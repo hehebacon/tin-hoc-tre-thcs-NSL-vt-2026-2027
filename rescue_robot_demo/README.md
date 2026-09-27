@@ -9,7 +9,8 @@ ESP32 motion boundary.
 - A* navigation with terrain cost
 - alternating-diagonal quadruped gait
 - gait movesets: IDLE, WALK, SLOW_WALK, SEARCH, RESCUE
-- foot-target -> IK -> joint-angle pipeline
+- foot-target -> hardware-aligned IK -> joint-angle telemetry
+- live leg moveset/phase visualization and joint-angle display
 - ESP32 MotionController gait execution
 - calibration remains between IK and servo output
 - E-STOP / resume path
@@ -23,7 +24,7 @@ Simulator:
     mission/path
         -> GaitPlanner
         -> FootTarget
-        -> IK model
+        -> QuadrupedIK (45/75/105 mm)
         -> joint angles
 
 ESP32:
@@ -66,3 +67,19 @@ JSON command example:
 Never treat simulator reachability as proof that a physical pose is safe.
 Mechanical limits, power/current limits and calibration must be verified on the
 real robot.
+
+
+## Simulator validation status
+
+The simulator now exposes the same nominal leg geometry documented for the
+physical robot:
+
+- Coxa: 45 mm
+- Femur: 75 mm
+- Tibia: 105 mm
+
+The Python IK layer is used for reachability and telemetry only. The ESP32
+Kinematics module remains authoritative for physical servo output and limits.
+
+The UI shows each leg's gait phase plus C/F/T joint angles while the robot
+moves. This makes gait changes visible before hardware power-up.
