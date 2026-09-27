@@ -54,3 +54,20 @@ Physical outputs remain disabled by default. The PCA9685 adapter uses `ENABLE_PC
 Do not treat simulated coordinates or joint angles as mechanically safe. Before enabling physical servos, verify the exact servo model, supply, wiring, mechanical travel, calibration and an accessible physical power cutoff.
 
 See `../WIRING_PLAN.md` and `HARDWARE_V2.md` for the staged bring-up process.
+
+
+## Competition-oriented V3 additions
+
+The simulation stack now also includes:
+
+- reusable TaskEngine for competition task profiles
+- DecisionEngine between perception, mission and motion
+- simulation-side body stabilization model
+- task progress exposed through the API
+- gait phase telemetry for FL/FR/RL/RR
+- animated quadruped movement on the command-center map
+- animated SWING/STANCE moveset cards
+- autonomous decision state shown in the dashboard
+
+The physical robot still requires staged integration and calibration. Simulation
+stabilization is not a claim of real-world mechanical stability.
