@@ -5,6 +5,7 @@
 #include "Kinematics.h"
 #include "ServoCalibration.h"
 #include "ServoManager.h"
+#include "GaitController.h"
 
 enum LegID {
     FL = 0,
@@ -24,6 +25,7 @@ public:
     MotionController();
 
     void begin();
+    void update(float dt = 0.05f);
 
     void setServo(int channel, int rawAngle);
 
@@ -33,9 +35,16 @@ public:
     bool setLegIK(LegID leg, float x, float y, float z);
     bool setLegIK(const String& name, float x, float y, float z);
 
+    bool setFootTarget(LegID leg, float x, float y, float z);
+    bool setFootTarget(const String& name, float x, float y, float z);
+
     bool solveIK(float x, float y, float z, JointAngles& result) const;
     void testIK(float x, float y, float z) const;
     bool validateFootTarget(float x, float y, float z) const;
+
+    void setGait(const String& mode);
+    void stopGait();
+    const GaitController& gait() const;
 
     void center();
     void stand();
@@ -62,6 +71,7 @@ private:
     ServoCalibrator calibrator;
     ServoManager servoManager;
     Kinematics kinematics;
+    GaitController gaitController;
 
     LegState legs[LEG_COUNT];
 
