@@ -552,3 +552,13 @@ MotionController::getLegState(
 
     return legs[leg];
 }
+
+bool MotionController::validateFootTarget(float x, float y, float z) const
+{
+    // Conservative software envelope only. Real mechanical limits must be
+    // calibrated for the actual frame, servo geometry and mounting.
+    const float radial = sqrtf(x * x + y * y);
+    if (radial < 35.0f || radial > 180.0f) return false;
+    if (z > -45.0f || z < -150.0f) return false;
+    return true;
+}
