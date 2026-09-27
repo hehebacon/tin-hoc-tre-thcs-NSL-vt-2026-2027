@@ -4,6 +4,12 @@ void MotionSafety::begin()
 {
     stopped = false;
     lastMotionMs = millis();
+    motionActive = true;
+}
+
+void MotionSafety::clearMotion()
+{
+    motionActive = false;
 }
 
 void MotionSafety::emergencyStop()
@@ -24,6 +30,7 @@ bool MotionSafety::allowed() const
 
 bool MotionSafety::timedOut() const
 {
+    if (!motionActive) return false;
     return (millis() - lastMotionMs) > MOTION_TIMEOUT_MS;
 }
 
