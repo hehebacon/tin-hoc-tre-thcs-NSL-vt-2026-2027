@@ -166,14 +166,45 @@ bool RobotCore::setMode(const String& mode)
         return false;
     }
 
-    currentMode = next;
-    missionActive = next != RobotMode::IDLE;
-
-    if (next == RobotMode::FAULT) {
-        enterFault();
-        return false;
+    if (next == RobotMode::IDLE) {
+        stop();
+        return true;
     }
 
+    if (next == RobotMode::PATROL) {
+        return setGoal("PATROL");
+    }
+
+    if (next == RobotMode::SEARCH) {
+        if (!setGoal("RESCUE")) {
+            return false;
+        }
+        currentMode = RobotMode::SEARCH;
+        return true;
+    }
+
+    if (next == RobotMode::RESCUE) {
+        if (!setGoal("RESCUE")) {
+            return false;
+        }
+        decisionEngine.targetDetected();
+        currentMode = RobotMode::RESCUE;
+        handleMission();
+        return true;
+    }
+
+    if (next == RobotMode::RETURN_HOME) {
+        return setGoal("RETURN_HOME");
+    }
+
+    if (next == RobotMode::DEMO) {
+        return setGoal("DEMO");
+    }
+
+    // Legacy modes remain available for diagnostics. They are not presented
+    // as autonomous capabilities unless their physical/sensor stack exists.
+    currentMode = next;
+    missionActive = true;
     applyMode();
     return true;
 }
@@ -276,6 +307,7 @@ void RobotCore::resetMission()
     missionActive = false;
     currentMode = RobotMode::IDLE;
     cycle = 0;
+    decisionEngine.clearGoal();
     motionController.stopGait();
 }
 
@@ -299,9 +331,11 @@ void RobotCore::returnHome()
         return;
     }
 
-    currentMode = RobotMode::RETURN_HOME;
-    missionActive = true;
-    motionController.setGait("SLOW_WALK");
+    if (decisionEngine.setGoal("RETURN_HOME")) {
+        missionActive = true;
+        currentMode = RobotMode::RETURN_HOME;
+        handleMission();
+    }
 }
 
 void RobotCore::enterFault()
