@@ -7,6 +7,7 @@
 #include "EnvironmentalSensors.h"
 #include "CameraInterface.h"
 #include "ThermalInterface.h"
+#include "DecisionEngine.h"
 #include "HardwareStatus.h"
 
 enum class RobotMode {
@@ -61,6 +62,10 @@ public:
 
     RobotCoreStatus status() const;
     String modeName() const;
+    String goalName() const;
+    String actionName() const;
+    bool setGoal(const String& goal);
+    void completeRescue();
 
 private:
     MotionController& motionController;
@@ -69,6 +74,7 @@ private:
     EnvironmentalSensors& environmentalSensors;
     CameraInterface& cameraInterface;
     ThermalInterface& thermalInterface;
+    DecisionEngine decisionEngine;
 
     RobotMode currentMode = RobotMode::IDLE;
     bool missionActive = false;
