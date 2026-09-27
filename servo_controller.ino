@@ -88,6 +88,19 @@ void processJsonPacket(const String& packet)
         return;
     }
 
+    if (command == "MISSION") {
+        String mode = jsonValue(packet, "mode");
+        if (robotCore.setMode(mode)) {
+            Serial.printf(
+                "{\"type\":\"ack\",\"command\":\"MISSION\",\"ok\":true,\"mode\":\"%s\"}\\n",
+                robotCore.modeName().c_str()
+            );
+        } else {
+            Serial.println("{\"type\":\"ack\",\"command\":\"MISSION\",\"ok\":false}");
+        }
+        return;
+    }
+
     if (command == "GAIT") {
         String mode = jsonValue(packet, "mode");
         mode.toUpperCase();
