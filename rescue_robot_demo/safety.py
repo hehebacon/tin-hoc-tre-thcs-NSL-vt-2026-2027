@@ -1,5 +1,5 @@
 class SafetyManager:
-    """Software safety gate for simulation and future hardware adapters."""
+    """Central software safety gate for simulation and future hardware adapters."""
 
     def __init__(self):
         self.estop = False
@@ -10,7 +10,9 @@ class SafetyManager:
         self.estop = True
         return {"ok": True, "state": "STOPPED", "reason": reason}
 
-    def resume(self):
+    def resume(self, battery=None):
+        if battery is not None and battery < self.min_battery:
+            return {"ok": False, "state": "BLOCKED", "reason": "LOW_BATTERY"}
         self.estop = False
         return {"ok": True, "state": "READY"}
 
@@ -20,6 +22,9 @@ class SafetyManager:
         if battery < self.min_battery:
             return False, "LOW_BATTERY"
         return True, "OK"
+
+    def clamp_speed(self, requested):
+        return max(0.0, min(float(requested), self.max_speed))
 
     def snapshot(self):
         return {
