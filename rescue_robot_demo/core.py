@@ -1,6 +1,7 @@
 from heapq import heappush, heappop
 
 from gait import GaitPlanner
+from ik import QuadrupedIK
 
 
 DIRS = ((1, 0), (-1, 0), (0, 1), (0, -1))
@@ -106,7 +107,10 @@ class RescueCore:
         self.emergency_stop = False
 
         self.gait = GaitPlanner()
+        self.ik = QuadrupedIK()
         self.last_leg_targets = self.gait.snapshot(moving=False)
+        self.last_joint_angles = self.ik.solve_all(self.gait.update(0.0, moving=False))
+        self.last_joint_angles = self.ik.solve_all(self.gait.update(0.0, moving=False))
 
         self.patrol_points = [
             base,
@@ -209,6 +213,7 @@ class RescueCore:
     def step(self, dt=0.05):
         if self.emergency_stop:
             self.last_leg_targets = self.gait.update(dt, moving=False)
+            self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
             return
 
         if self.mode in ("CLIMB", "CALIBRATION"):
@@ -233,6 +238,7 @@ class RescueCore:
 
         moving = bool(self.path)
         self.last_leg_targets = self.gait.update(dt, moving=moving)
+        self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
 
     def report_found(self):
         if not self.found:
