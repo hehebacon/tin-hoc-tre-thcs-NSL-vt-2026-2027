@@ -21,9 +21,10 @@ DecisionOutput DecisionEngine::updateCompetition(){
     if(!competitionInputs.sensorsHealthy){ currentAction=DecisionAction::FAULT; return {currentGoal,currentAction,false}; }
     switch(currentPhase){
         case CompetitionPhase::AUTONOMOUS:
-            if(competitionInputs.allAutonomousTasksDone){ startEndGame(); break; }
+            if(competitionInputs.allAutonomousTasksDone && competitionInputs.endGameReady){ startEndGame(); break; }
             if(competitionInputs.targetDetected && !competitionInputs.targetPicked) currentAction=DecisionAction::PICKUP;
-            else if(competitionInputs.targetPicked && !competitionInputs.targetPlaced) currentAction=DecisionAction::CLASSIFY;
+            else if(competitionInputs.targetPicked && !competitionInputs.targetClassified) currentAction=DecisionAction::CLASSIFY;
+            else if(competitionInputs.targetClassified && !competitionInputs.targetPlaced) currentAction=DecisionAction::PLACE;
             else if(competitionInputs.targetPlaced) currentAction=DecisionAction::LINE_FOLLOW;
             else if(competitionInputs.obstacleDetected) currentAction=DecisionAction::APPROACH;
             else if(competitionInputs.lineDetected || competitionInputs.intersectionDetected) currentAction=DecisionAction::LINE_FOLLOW;
