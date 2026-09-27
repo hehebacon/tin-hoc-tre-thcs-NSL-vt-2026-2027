@@ -38,3 +38,9 @@ Before powering a real mechanism:
 - verify servo orientation and calibration before gait testing
 
 The repository does not assume that simulated angles are safe mechanical angles.
+
+## Firmware adapter status
+
+The firmware now contains guarded adapters for PCA9685, IMU and environmental sensing. PCA9685 output remains disabled by default (`ENABLE_PCA9685 0`). Physical activation requires the matching library, verified wiring, servo calibration and conservative mechanical limits.
+
+A firmware motion timeout and local E-STOP latch are also present so the network link is not the only safety layer.
