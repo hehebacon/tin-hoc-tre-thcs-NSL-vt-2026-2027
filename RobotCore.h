@@ -67,6 +67,13 @@ public:
     bool setGoal(const String& goal);
     void completeRescue();
 
+    void startAutonomous();
+    void startDriverControl();
+    void startEndGame();
+    void finishCompetition();
+    void setCompetitionInput(const CompetitionInputs& inputs);
+    String phaseName() const;
+
 private:
     MotionController& motionController;
     MotionSafety& motionSafety;
