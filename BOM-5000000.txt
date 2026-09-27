@@ -1,0 +1,103 @@
+# RESCUE ROBOT — BOM 5,000,000 VND HARD CAP
+Project: Tin học trẻ THCS Ngô Sĩ Liên — Vũng Tàu 2026–2027
+Target: quadruped rescue robot, 4 legs / 12 DOF
+Budget ceiling: EXACTLY 5,000,000 VND
+Pricing checked: September 2026
+Note: prices are reference prices found online and can change; shipping is not included.
+
+## 1. ACTUATORS
+| Item | Qty | Unit (VND) | Subtotal |
+|---|---:|---:|---:|
+| DS3218MG 20KG metal-gear servo | 12 | 205,000 | 2,460,000 |
+
+Servo reference: Shopee listing checked at 205,000 VND for DS3218 20KG.
+A higher-end DS3218Pro reference was also found at 320,000 VND, but 12 units would break the 5M cap.
+For this hard-cap build, use the 20KG class servo and validate actual torque under the final robot mass/geometry before purchase.
+
+## 2. CONTROL / ELECTRONICS
+| Item | Qty | Unit (VND) | Subtotal |
+|---|---:|---:|---:|
+| ESP32 DevKit | 1 | 109,000 | 109,000 |
+| PCA9685 16-channel servo driver | 1 | 90,000 | 90,000 |
+| 3.5-ish inch class TFT touch display | 1 | 258,409 | 258,409 |
+| MPU6050 IMU | 1 | 68,000 | 68,000 |
+| BME280 | 1 | 45,135 | 45,135 |
+| MLX90614 IR thermal sensor | 1 | 167,045 | 167,045 |
+| VL53L0X ToF distance sensor | 3 | 39,400 | 118,200 |
+| ESP32-CAM / OV2640 camera board | 1 | 170,000 | 170,000 |
+
+## 3. POWER
+| Item | Qty | Unit (VND) | Subtotal |
+|---|---:|---:|---:|
+| ZTW UBEC 6A / 10A max, 2S–6S | 1 | 223,608 | 223,608 |
+| 2S 7.4V 2200mAh 30C LiPo | 1 | 190,000 | 190,000 |
+| XL4015 5A buck converter | 1 | 35,000 | 35,000 |
+| E-STOP / master switch / fuse hardware | 1 set | 50,000 | 50,000 |
+
+IMPORTANT POWER NOTE:
+- Servo rail must be separated from the ESP32 logic rail.
+- The UBEC feeds the servo rail.
+- The buck feeds logic/display as appropriate.
+- Do NOT power the 12 servos from the ESP32 or a small 5V regulator.
+- Actual current demand must be tested before full-load operation.
+
+## 4. MECHANICAL
+| Item | Qty | Budget (VND) |
+|---|---:|---:|
+| Load-bearing aluminum/frame material | 1 set | 350,000 |
+| PETG/nylon 3D printed shell/brackets | 1 set | 300,000 |
+| Shafts + bearings + servo horns + screws | 1 set | 220,000 |
+| LED + buzzer + connectors + wiring + capacitors | 1 set | 100,000 |
+
+## 5. BUDGET RESERVE
+| Item | Budget |
+|---|---:|
+| Small price/consumable reserve | 5,603 VND |
+
+## TOTAL
+Actuators:        2,460,000
+Electronics:      1,025,789
+Power:              498,608
+Mechanical:         970,000
+Reserve:              5,603
+--------------------------------
+TOTAL:            4,960,000 VND
+
+## FINAL 40,000 VND GAP
+Keep 40,000 VND unallocated as an intentional contingency for price movement / small hardware.
+
+HARD CAP:
+5,000,000 VND maximum.
+
+## CURRENT CHECKED PRICE REFERENCES
+- DS3218 20KG: 205,000 VND reference
+- DS3218Pro 20KG: 320,000 VND reference
+- ESP32 DevKit: about 109,000–129,000 VND
+- PCA9685: about 90,000–122,000 VND
+- 2.4/2.8-inch ESP32 TFT touch boards: about 258,409–278,409 VND
+- MPU6050: 68,000 VND reference
+- BME280: about 45,135 VND reference
+- MLX90614: about 167,045 VND reference
+- VL53L0X: 39,400 VND reference
+- ESP32-CAM: about 170,000 VND reference
+- ZTW UBEC 6A / 10A max: about 223,608 VND reference
+- 2S 7.4V 2200mAh 30C LiPo: 190,000 VND reference
+- XL4015 5A buck: 35,000 VND reference
+
+## ENGINEERING STATUS
+IMPLEMENTED / PLANNED:
+- 12-servo quadruped architecture
+- ESP32 + PCA9685 control architecture
+- IMU / environmental / distance / thermal / camera interfaces
+- separate servo and logic power architecture
+- 80cm-class physical design documented in robot-out.txt
+
+HARDWARE DEPENDENT:
+- final servo torque margin
+- actual battery runtime
+- final frame mass
+- thermal/camera performance
+- exact screen mounting
+- final mechanical dimensions
+
+This BOM is a budget target, not a claim that every listed price will remain available at purchase time.
