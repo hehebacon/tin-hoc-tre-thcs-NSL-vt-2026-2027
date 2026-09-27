@@ -68,7 +68,23 @@ class Pathfinder:
 
 
 class RescueCore:
-    MODES = ("PATROL", "RESCUE", "OSINT", "AUTONOMOUS")
+    MODES = (
+        "PATROL",
+        "SEARCH",
+        "RESCUE",
+        "FOLLOW",
+        "AVOID",
+        "EXPLORE",
+        "INSPECT",
+        "DELIVER",
+        "RECHARGE",
+        "RETURN_HOME",
+        "OSINT",
+        "AUTONOMOUS",
+        "DEMO",
+        "CALIBRATION",
+        "CLIMB",
+    )
 
     def __init__(self, width, height, obstacles, base, victim):
         terrain = {}
@@ -101,6 +117,7 @@ class RescueCore:
         self.patrol_index = 0
         self.last_target = None
         self.search_radius = 0
+        self.wall_climb_driver_ready = False
         self.log = ["SYSTEM READY"]
 
     def log_event(self, message):
@@ -117,14 +134,22 @@ class RescueCore:
         self.last_target = None
         self.searching = mode in ("RESCUE", "OSINT")
 
-        if mode == "PATROL":
+        if mode in ("PATROL", "RETURN_HOME", "DELIVER", "RECHARGE"):
             self.gait.set_moveset("SLOW_WALK")
         elif mode == "RESCUE":
             self.gait.set_moveset("RESCUE")
-        elif mode == "AUTONOMOUS":
+        elif mode in ("EXPLORE", "AUTONOMOUS", "DEMO"):
             self.gait.set_moveset("WALK")
-        else:
+        elif mode in ("FOLLOW", "AVOID", "SEARCH", "INSPECT", "OSINT"):
             self.gait.set_moveset("SEARCH")
+        elif mode == "CLIMB":
+            self.gait.set_moveset("IDLE")
+            self.log_event(
+                "WALL CLIMB STANDBY - HARDWARE DRIVER REQUIRED"
+            )
+        elif mode == "CALIBRATION":
+            self.gait.set_moveset("IDLE")
+            self.log_event("CALIBRATION MODE")
 
         self.log_event(f"MODE -> {mode}")
         return True
@@ -162,6 +187,9 @@ class RescueCore:
         }
 
     def _select_target(self):
+        if self.mode == "CLIMB":
+            return self.robot
+
         if self.mode == "PATROL":
             target = self.patrol_points[self.patrol_index]
             if self.robot == target:
@@ -180,6 +208,10 @@ class RescueCore:
 
     def step(self, dt=0.05):
         if self.emergency_stop:
+            self.last_leg_targets = self.gait.update(dt, moving=False)
+            return
+
+        if self.mode in ("CLIMB", "CALIBRATION"):
             self.last_leg_targets = self.gait.update(dt, moving=False)
             return
 
