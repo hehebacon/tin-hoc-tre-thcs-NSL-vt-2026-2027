@@ -109,8 +109,7 @@ class RescueCore:
         self.gait = GaitPlanner()
         self.ik = QuadrupedIK()
         self.last_leg_targets = self.gait.snapshot(moving=False)
-        self.last_joint_angles = self.ik.solve_all(self.gait.update(0.0, moving=False))
-        self.last_joint_angles = self.ik.solve_all(self.gait.update(0.0, moving=False))
+        self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
 
         self.patrol_points = [
             base,
@@ -218,6 +217,7 @@ class RescueCore:
 
         if self.mode in ("CLIMB", "CALIBRATION"):
             self.last_leg_targets = self.gait.update(dt, moving=False)
+            self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
             return
 
         target = self._select_target()
