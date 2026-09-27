@@ -4,6 +4,7 @@ import unittest
 from config import BASE, VICTIM, OBSTACLES
 from core import Pathfinder, RescueCore
 from gait import GaitPlanner
+from ik import QuadrupedIK
 from safety import SafetyManager
 
 
