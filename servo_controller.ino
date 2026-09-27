@@ -2,8 +2,21 @@
 
 #include "config.h"
 #include "MotionController.h"
+#include "PCA9685ServoDriver.h"
+#include "ImuInterface.h"
+#include "EnvironmentalSensors.h"
+#include "CameraInterface.h"
+#include "ThermalInterface.h"
+#include "MotionSafety.h"
+#include "HardwareStatus.h"
 
 MotionController motionController;
+PCA9685ServoDriver pca9685;
+ImuInterface imu;
+EnvironmentalSensors environmental;
+CameraInterface camera;
+ThermalInterface thermal;
+MotionSafety motionSafety;
 
 String serialBuffer;
 bool safetyStopLatched = false;
@@ -27,12 +40,14 @@ void processJsonPacket(const String& packet)
 
     if (command == "STOP") {
         safetyStopLatched = true;
+        motionSafety.emergencyStop();
         motionController.disable();
         Serial.println("{\"type\":\"ack\",\"command\":\"STOP\",\"ok\":true}");
         return;
     }
 
     if (command == "RESUME") {
+        motionSafety.resume();
         safetyStopLatched = false;
         motionController.enable();
         Serial.println("{\"type\":\"ack\",\"command\":\"RESUME\",\"ok\":true}");
@@ -40,7 +55,7 @@ void processJsonPacket(const String& packet)
     }
 
     if (command == "CENTER") {
-        if (safetyStopLatched) {
+        if (safetyStopLatched || !motionSafety.allowed()) {
             Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":false,\"error\":\"E_STOP\"}");
             return;
         }
@@ -50,7 +65,7 @@ void processJsonPacket(const String& packet)
     }
 
     if (command == "STAND") {
-        if (safetyStopLatched) {
+        if (safetyStopLatched || !motionSafety.allowed()) {
             Serial.println("{\"type\":\"ack\",\"command\":\"STAND\",\"ok\":false,\"error\":\"E_STOP\"}");
             return;
         }
@@ -68,10 +83,16 @@ void emitTelemetry()
         return;
 
     lastTelemetryMs = millis();
+    HardwareStatus status = {
+        pca9685.available(), false, false, false, false, false,
+        motionSafety.allowed()
+    };
+
     Serial.printf(
-        "{\"type\":\"telemetry\",\"firmware\":\"%s\",\"safety_stop\":%s,\"hardware_mode\":\"SIMULATION\"}\n",
+        "{\"type\":\"telemetry\",\"firmware\":\"%s\",\"safety_stop\":%s,\"hardware\":%s}\n",
         FIRMWARE_VERSION,
-        safetyStopLatched ? "true" : "false"
+        safetyStopLatched ? "true" : "false",
+        hardwareStatusJson(status).c_str()
     );
 }
 
@@ -392,6 +413,12 @@ void setup()
     Serial.println();
 
     motionController.begin();
+    pca9685.begin();
+    imu.begin();
+    environmental.begin();
+    camera.begin();
+    thermal.begin();
+    motionSafety.begin();
 
     Serial.println(
         "[BOOT] Firmware READY"
@@ -407,6 +434,13 @@ void setup()
 void loop()
 {
     emitTelemetry();
+
+    if (motionSafety.timedOut() && !safetyStopLatched) {
+        safetyStopLatched = true;
+        motionSafety.emergencyStop();
+        motionController.disable();
+        Serial.println("{\"type\":\"safety\",\"event\":\"MOTION_TIMEOUT\"}");
+    }
 
     while (Serial.available()) {
 
