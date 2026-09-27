@@ -8,67 +8,37 @@
 </head>
 <body>
 <header>
-  <div>
-    <h1>RESCUE ROBOT OS</h1>
-    <span>QUADRUPED SEARCH & RESCUE // COMMAND CENTER V0.3</span>
-  </div>
+  <div><h1>RESCUE ROBOT OS</h1><span>QUADRUPED SEARCH & RESCUE // V1 COMMAND CENTER</span></div>
   <div class="header-right">
     <span id="connection" class="badge offline">OFFLINE</span>
     <strong id="mode">OFFLINE</strong>
   </div>
 </header>
-
 <main>
-  <section class="panel map-panel">
-    <div class="panel-title">MISSION MAP</div>
-    <div id="map"></div>
-  </section>
-
-  <aside>
-    <section class="panel">
-      <div class="panel-title">MISSION CONTROL</div>
-      <div class="mission-row">
-        <input id="missionName" value="SEARCH ALPHA" maxlength="40">
-        <button id="startMission">START</button>
-      </div>
-      <button id="stopMission">STOP MISSION</button>
-      <button id="resetMission">RESET ROBOT</button>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">OPERATING MODE</div>
-      <button data-mode="PATROL">PATROL</button>
-      <button data-mode="RESCUE">SEARCH & RESCUE</button>
-      <button data-mode="OSINT">PUBLIC DATA</button>
-      <button data-mode="AUTONOMOUS">AUTONOMOUS</button>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">ROBOT TELEMETRY</div>
-      <div class="metrics">
-        <div><span>BATTERY</span><b id="battery">--</b></div>
-        <div><span>SIGNAL</span><b id="signal">--</b></div>
-        <div><span>SPEED</span><b id="speed">--</b></div>
-        <div><span>HEADING</span><b id="heading">--</b></div>
-        <div><span>PITCH</span><b id="pitch">--</b></div>
-        <div><span>ROLL</span><b id="roll">--</b></div>
-        <div><span>GPS</span><b id="gps">--</b></div>
-        <div><span>STATE</span><b id="state">--</b></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">SENSOR FUSION</div>
-      <pre id="sensor">Connecting...</pre>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title">MISSION EVENTS</div>
-      <pre id="events"></pre>
-    </section>
-  </aside>
+<section class="panel map-panel"><div class="panel-title">MISSION MAP</div><div id="map"></div></section>
+<aside>
+<section class="panel">
+  <div class="panel-title">MISSION CONTROL</div>
+  <div class="mission-row"><input id="missionName" value="SEARCH ALPHA" maxlength="40"><button id="startMission">START</button></div>
+  <button id="stopMission">STOP / E-STOP</button>
+  <button id="returnHome">RETURN HOME</button>
+  <button id="resumeRobot">RESUME</button>
+  <button id="resetMission">RESET ROBOT</button>
+</section>
+<section class="panel"><div class="panel-title">OPERATING MODE</div>
+<button data-mode="PATROL">PATROL</button><button data-mode="RESCUE">SEARCH & RESCUE</button>
+<button data-mode="OSINT">PUBLIC DATA</button><button data-mode="AUTONOMOUS">AUTONOMOUS</button></section>
+<section class="panel"><div class="panel-title">ROBOT TELEMETRY</div>
+<div class="metrics">
+<div><span>BATTERY</span><b id="battery">--</b></div><div><span>SIGNAL</span><b id="signal">--</b></div>
+<div><span>SPEED</span><b id="speed">--</b></div><div><span>HEADING</span><b id="heading">--</b></div>
+<div><span>PITCH</span><b id="pitch">--</b></div><div><span>ROLL</span><b id="roll">--</b></div>
+<div><span>GPS</span><b id="gps">--</b></div><div><span>STATE</span><b id="state">--</b></div>
+</div></section>
+<section class="panel"><div class="panel-title">SENSOR FUSION</div><pre id="sensor">Connecting...</pre></section>
+<section class="panel"><div class="panel-title">MISSION EVENTS</div><pre id="events"></pre></section>
+</aside>
 </main>
-
 <script src="app.js"></script>
 </body>
 </html>
