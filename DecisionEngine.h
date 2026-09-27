@@ -24,6 +24,7 @@ struct CompetitionInputs {
     bool obstacleDetected = false;
     bool targetDetected = false;
     bool targetPicked = false;
+    bool targetClassified = false;
     bool targetPlaced = false;
     bool allAutonomousTasksDone = false;
     bool endGameReady = false;
