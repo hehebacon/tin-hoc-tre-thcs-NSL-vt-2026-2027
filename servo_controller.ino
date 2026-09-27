@@ -54,6 +54,17 @@ void processJsonPacket(const String& packet)
         return;
     }
 
+    if (command == "ENABLE") {
+        if (safetyStopLatched || !motionSafety.allowed()) {
+            Serial.println("{\"type\":\"error\",\"error\":\"SAFETY_BLOCK\"}");
+            return;
+        }
+        motionController.enable();
+        motionSafety.noteMotionCommand();
+        Serial.println("{\"type\":\"ack\",\"command\":\"ENABLE\"}");
+        return;
+    }
+
     if (command == "CENTER") {
         if (safetyStopLatched || !motionSafety.allowed()) {
             Serial.println("{\"type\":\"ack\",\"command\":\"CENTER\",\"ok\":false,\"error\":\"E_STOP\"}");
@@ -173,13 +184,13 @@ void processCommand(String command)
     }
 
     if (command == "center") {
-        if (safetyStopLatched) { Serial.println("[SAFETY] E-STOP active"); return; }
+        if (safetyStopLatched || !motionSafety.allowed()) { Serial.println("[SAFETY] E-STOP active"); return; }
         motionController.center();
         return;
     }
 
     if (command == "stand") {
-        if (safetyStopLatched) { Serial.println("[SAFETY] E-STOP active"); return; }
+        if (safetyStopLatched || !motionSafety.allowed()) { Serial.println("[SAFETY] E-STOP active"); return; }
         motionController.stand();
         return;
     }
