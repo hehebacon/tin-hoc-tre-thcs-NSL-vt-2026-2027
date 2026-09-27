@@ -4,7 +4,7 @@ void MotionSafety::begin()
 {
     stopped = false;
     lastMotionMs = millis();
-    motionActive = true;
+    motionActive = false;
 }
 
 void MotionSafety::clearMotion()
@@ -21,6 +21,7 @@ void MotionSafety::resume()
 {
     stopped = false;
     lastMotionMs = millis();
+    motionActive = false;
 }
 
 bool MotionSafety::allowed() const
@@ -37,4 +38,5 @@ bool MotionSafety::timedOut() const
 void MotionSafety::noteMotionCommand()
 {
     lastMotionMs = millis();
+    motionActive = true;
 }
