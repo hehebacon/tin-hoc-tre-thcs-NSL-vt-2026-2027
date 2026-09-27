@@ -38,5 +38,5 @@ bool MotionSafety::timedOut() const
 void MotionSafety::noteMotionCommand()
 {
     lastMotionMs = millis();
-    motionActive = false;
+    motionActive = true;
 }
