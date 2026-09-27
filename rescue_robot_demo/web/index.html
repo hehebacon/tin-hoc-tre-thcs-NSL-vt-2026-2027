@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rescue Robot Control</title>
+<style>
+body{margin:0;background:#0b1016;color:#e8eef5;font-family:system-ui,sans-serif}
+header{padding:18px 24px;border-bottom:1px solid #26313d}
+main{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;padding:16px}
+.panel{background:#111923;border:1px solid #26313d;border-radius:12px;padding:16px}
+#map{position:relative;height:520px;background:#151e27;border-radius:8px;overflow:hidden}
+.cell{position:absolute;width:20px;height:20px;background:#202b36}
+.block{background:#59636d}.robot{background:#70e18d}.victim{background:#ff7070}
+button{padding:9px 12px;margin:3px;border:1px solid #394958;border-radius:7px;background:#18232e;color:white;cursor:pointer}
+pre{white-space:pre-wrap}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><b>RESCUE ROBOT OS</b> — Web Control V1</header>
+<main>
+<section class="panel"><div id="map"></div></section>
+<section class="panel">
+<div id="controls"></div>
+<pre id="status">Connecting...</pre>
+</section>
+</main>
+<script>
+const W=24,H=16,S=20;
+const obstacles=[[7,1],[7,2],[7,3],[7,4],[7,5],[12,5],[13,5],[14,5],[15,5],[17,9],[17,10],[17,11],[17,12],[4,10],[5,10],[6,10],[7,10],[8,10]];
+const map=document.querySelector('#map');
+const status=document.querySelector('#status');
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){const e=document.createElement('div');e.className='cell '+(obstacles.some(p=>p[0]===x&&p[1]===y)?'block':'');e.style.left=x*S+'px';e.style.top=y*S+'px';map.appendChild(e)}
+const robot=document.createElement('div');robot.className='cell robot';map.appendChild(robot);
+const victim=document.createElement('div');victim.className='cell victim';victim.style.left=20*S+'px';victim.style.top=12*S+'px';map.appendChild(victim);
+for(const mode of ['PATROL','RESCUE','OSINT','AUTONOMOUS']){const b=document.createElement('button');b.textContent=mode;b.onclick=()=>fetch('/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});document.querySelector('#controls').appendChild(b)}
+async function refresh(){try{const r=await fetch('/api/status');const d=await r.json();robot.style.left=d.robot.x*S+'px';robot.style.top=d.robot.y*S+'px';status.textContent=JSON.stringify(d,null,2)}catch(e){status.textContent='API OFFLINE\n'+e}setTimeout(refresh,500)}refresh();
+</script>
+</body>
+</html>
