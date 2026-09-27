@@ -12,6 +12,7 @@ void Perception::setObstacle(bool detected, float distanceCm) {
 }
 void Perception::setTarget(bool detected) { world.targetDetected = detected; }
 void Perception::setTargetPicked(bool value) { world.targetPicked = value; }
+void Perception::setTargetClassified(bool value) { world.targetClassified = value; }
 void Perception::setTargetPlaced(bool value) { world.targetPlaced = value; }
 void Perception::setColor(DetectedColor color, float confidence, bool valid) {
     world.targetColor = {color, confidence, valid};
