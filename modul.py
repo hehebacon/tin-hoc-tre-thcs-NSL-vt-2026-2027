@@ -35,7 +35,7 @@ def hip_bracket():
  part=part.cut(Box(W+2*CLR,L+2*CLR,H+2,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,0,-.5)))
  part=part.fuse(Sphere(12).translate((-ow*.5,-ol*.15,oh*.55))).fuse(Sphere(12).translate((ow*.5,-ol*.15,oh*.55)))
  for x in (-ow*.3,ow*.3):
-  part=part.cut(Cylinder(M3_R,oh+1,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((x,ol*.18,-.5)))
+  part=part.cut(Cylinder(M3_R,oh+1,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((x,ol*.18,0)))
   part=part.cut(Cylinder(P["fastener_head"]/2,P["fastener_depth"]+.7,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((x,ol*.18,oh-P["fastener_depth"]-.2)))
  boss=Cylinder(16,ow*.7,rotation=(0,90,0)).translate((0,0,oh*.5))
  pivot=Cylinder(PIVOT_R,ow+8,rotation=(0,90,0),align=(Align.CENTER,Align.CENTER,Align.CENTER)).translate((0,0,oh*.5))
