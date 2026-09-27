@@ -1,35 +1,34 @@
-RESCUE QUADRUPED — FDM PRINT V3
-==========================================================
+RESCUE QUADRUPED — FDM PRINT V4 / DRAGON BODY
+==============================================================
+
+DESIGN
+- Dragon-style central body with armored spine
+- Rear articulated tapering dragon tail
+- Separate tail modules for easier printing/replacement
+- Dragon head with drilled eye openings
+- Tapered leg links with structural ribs
 
 MODEL
 Nominal robot height: 800.0 mm
-Thigh length: 180.0 mm
-Shin length: 200.0 mm
+Body: 145.0 x 250.0 x 72.0 mm
+Thigh: 180.0 mm
+Shin: 200.0 mm
+Tail modules: 6 + tip
+Eye hole diameter: 8.0 mm
 
-SERVO PROTOTYPE ENVELOPE
-Width: 20.0 mm
-Length: 40.0 mm
-Height: 40.0 mm
+PRINT FILES
+- Dragon body
+- Dragon head with eye holes
+- Dragon hip brackets
+- Dragon thigh links
+- Dragon knee/shin links
+- Tail modules 01-06
+- Tail tip
 
-FDM FIT
-Wall thickness: 5.0 mm
-General clearance: 0.35 mm
-M3 through hole: 3.4 mm
-M3 insert pocket: 4.3 mm
-Pivot hole: 4.2 mm
-
-PRINT FILES — USE THESE FOR SLICER
-1. RescueQuadruped_Hip_Bracket_PRINT.stl
-2. RescueQuadruped_Thigh_Link_PRINT.stl
-3. RescueQuadruped_Knee_Shin_PRINT.stl
-
-MASTER CAD FILES — DO NOT USE AS SLICER INPUT
-STEP files are provided for CAD editing/assembly.
-
-SUGGESTED FIRST PROTOTYPE
+FDM STARTING PROFILE
 - Layer height: 0.20 mm
-- Walls: 4 or more
-- Infill: 30-50%
-- Material: PETG or another mechanically suitable FDM material
-- Print one test part before printing all 4 legs.
-- Re-measure servo and hardware before final production.
+- Walls: 4+
+- Infill: 30-50% for structural prototypes
+- PETG or another mechanically suitable material
+- Print one body/leg/tail test before full production
+- Verify real servo and fastener dimensions before final print
