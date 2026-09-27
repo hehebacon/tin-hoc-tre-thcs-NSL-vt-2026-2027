@@ -434,6 +434,142 @@ def accessory_kit():
 
 
 
+def dragon_neck_armor():
+    """Layered dragon neck collar with dorsal scales and cable/service channels."""
+    parts=[]
+    for i, z in enumerate((0, 10, 20, 30)):
+        r_outer=34.0-i*4.0
+        r_inner=max(16.0, 22.0-i*1.5)
+        ring=Cylinder(r_outer, 7,
+                      align=(Align.CENTER, Align.CENTER, Align.MIN))
+        ring=ring.cut(
+            Cylinder(r_inner, 9,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0,0,-1))
+        )
+        parts.append(ring)
+
+    # Dorsal dragon scales.
+    for i,y in enumerate((-24,-12,0,12,24)):
+        r=12.0-abs(i-2)*1.4
+        parts.append(
+            Cone(r, 1.5, 20,
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0,y,34+i*2))
+        )
+
+    # Side armor fins.
+    for x in (-1,1):
+        parts.append(
+            Box(7, 58, 18,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((x*31,0,8))
+        )
+
+    return Compound(children=parts)
+
+
+def dragon_spike_set():
+    """Reusable aggressive but printable spike cluster for body/tail."""
+    spikes=[]
+    for y in (-28,-14,0,14,28):
+        size=13.0-abs(y)/6.0
+        spikes.append(
+            Cone(size, 1.0, 26,
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0,y,0))
+        )
+    return Compound(children=spikes)
+
+
+def body_dragon_spines():
+    """Central dorsal spine row and side scale plates."""
+    parts=[]
+    bl=P["body_length"]
+    for i,y in enumerate((-bl*.34,-bl*.20,-bl*.06,bl*.08,bl*.22,bl*.34)):
+        h=28.0-abs(i-2.5)*2.2
+        parts.append(
+            Cone(15.0, 2.0, h,
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0,y,P["body_height"]+2))
+        )
+    # Paired side scales.
+    for x in (-1,1):
+        for y in (-bl*.28,-bl*.08,bl*.12,bl*.30):
+            parts.append(
+                Cone(11,2,18,
+                     align=(Align.CENTER,Align.CENTER,Align.MIN))
+                .rotate(Axis.Y, x*55)
+                .translate((x*(P["body_width"]*.46),y,P["body_height"]*.42))
+            )
+    return Compound(children=parts)
+
+
+def tail_dragon_spines():
+    """Dense dorsal spike chain for the full dragon tail."""
+    parts=[]
+    for i in range(P["tail_modules"]+2):
+        t=i/max(1,P["tail_modules"]+1)
+        r=15.0*(1-t)+4.0*t
+        h=34.0*(1-t)+12.0*t
+        parts.append(
+            Cone(r,1.0,h,
+                 align=(Align.CENTER,Align.CENTER,Align.MIN))
+            .translate((0,i*P["tail_module_length"]*.72,0))
+        )
+    return Compound(children=parts)
+
+
+def service_mount_rail():
+    """Universal hidden service rail for future covers/accessories."""
+    rail=Box(14,96,10,align=(Align.CENTER,Align.CENTER,Align.MIN))
+    # Repeated M3 mounting points.
+    for y in (-36,-12,12,36):
+        rail=rail.cut(
+            Cylinder(M3_R,14,
+                     align=(Align.CENTER,Align.CENTER,Align.MIN))
+            .translate((0,y,-1))
+        )
+    return rail
+
+
+def removable_cover_frame():
+    """Small frame representing a future removable electronics cover."""
+    outer=Box(72,52,5,align=(Align.CENTER,Align.CENTER,Align.MIN))
+    inner=Box(58,38,7,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,0,-1))
+    frame=outer.cut(inner)
+    for x in (-27,27):
+        for y in (-18,18):
+            frame=frame.cut(
+                Cylinder(M3_R,8,align=(Align.CENTER,Align.CENTER,Align.MIN))
+                .translate((x,y,-1))
+            )
+    return frame
+
+
+def accessory_kit():
+    """Complete visual/mechanical accessory set for the finished robot."""
+    return Compound(children=[
+        shoulder_armor(),
+        thigh_armor(),
+        shin_armor(),
+        foot_claw(),
+        body_side_armor(),
+        head_crest(),
+        neck_ring(),
+        dragon_neck_armor(),
+        sensor_pod(),
+        rescue_beacon(),
+        tail_armor_segment(),
+        dragon_spike_set(),
+        body_dragon_spines(),
+        tail_dragon_spines(),
+        service_mount_rail(),
+        removable_cover_frame(),
+        cable_clip(),
+    ])
+
+
 def body_shell():
  bl,bw,bh=P["body_length"],P["body_width"],P["body_height"]; part=Box(bw,bl,bh,align=(Align.CENTER,Align.CENTER,Align.MIN))
  for y in (-bl*.42,bl*.40): part=part.fuse(Sphere(bw*.42).translate((0,y,bh*.48)))
@@ -490,9 +626,15 @@ if __name__=="__main__":
   ("Body_Side_Armor",body_side_armor()),
   ("Head_Crest",head_crest()),
   ("Neck_Ring",neck_ring()),
+  ("Dragon_Neck_Armor",dragon_neck_armor()),
   ("Sensor_Pod",sensor_pod()),
   ("Rescue_Beacon",rescue_beacon()),
   ("Tail_Armor_Segment",tail_armor_segment()),
+  ("Dragon_Spike_Set",dragon_spike_set()),
+  ("Body_Dragon_Spines",body_dragon_spines()),
+  ("Tail_Dragon_Spines",tail_dragon_spines()),
+  ("Service_Mount_Rail",service_mount_rail()),
+  ("Removable_Cover_Frame",removable_cover_frame()),
   ("Cable_Clip",cable_clip()),
  ]
  for name,part in accessories:
