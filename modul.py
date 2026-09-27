@@ -2,83 +2,97 @@ import os
 from build123d import *
 
 # ============================================================
-# RESCUE QUADRUPED — PRINTABLE LEG CAD V2
-# Parametric mechanical model for FDM prototyping.
-# All dimensions are millimeters.
+# RESCUE QUADRUPED — FDM PRINT V3
+# Physical-print oriented parametric leg parts.
+#
+# Output:
+#   output_cad/print_ready/*.stl
+#   output_cad/cad_master/*.step
+#   output_cad/PRINT_SPEC.txt
 #
 # IMPORTANT:
-# - Verify the actual servo body, horn, screws and inserts before printing.
-# - These are prototype dimensions, not a certified load-bearing design.
-# - Change values in DESIGN below instead of editing geometry functions.
+# These are printable prototypes. Confirm the real servo,
+# horn, screw and joint dimensions before final production.
 # ============================================================
 
-os.makedirs("output_cad", exist_ok=True)
+OUT = "output_cad"
+PRINT_OUT = os.path.join(OUT, "print_ready")
+CAD_OUT = os.path.join(OUT, "cad_master")
+os.makedirs(PRINT_OUT, exist_ok=True)
+os.makedirs(CAD_OUT, exist_ok=True)
 
 # ============================================================
-# DESIGN PARAMETERS
+# MASTER PARAMETERS — mm
 # ============================================================
-DESIGN = {
-    # Robot / leg
-    "robot_nominal_height": 800.0,
+P = {
+    "robot_height": 800.0,
+
+    # Prototype servo envelope. Replace with measured servo.
+    "servo_w": 20.0,
+    "servo_l": 40.0,
+    "servo_h": 40.0,
+
+    # Leg geometry
     "thigh_length": 180.0,
     "shin_length": 200.0,
 
-    # Servo envelope — replace with measured dimensions of the actual servo
-    "servo_width": 20.0,
-    "servo_length": 40.0,
-    "servo_height": 40.0,
-
-    # FDM / mechanical
+    # FDM
     "wall": 5.0,
     "clearance": 0.35,
-    "m3_hole_d": 3.4,
-    "m3_insert_d": 4.3,
-    "pivot_d": 4.2,
-    "horn_d": 20.0,
-    "foot_d": 24.0,
+    "min_feature": 2.4,
+    "m3_hole": 3.4,
+    "m3_insert": 4.3,
+    "pivot_hole": 4.2,
 
-    # Manufacturing
+    # Foot
+    "foot_diameter": 30.0,
+    "foot_thickness": 5.0,
+
+    # STL quality
     "stl_tolerance": 0.05,
     "stl_angular_tolerance": 0.1,
 }
 
-S = DESIGN
-SERVO_W = S["servo_width"]
-SERVO_L = S["servo_length"]
-SERVO_H = S["servo_height"]
-WALL = S["wall"]
-CLR = S["clearance"]
-M3_R = S["m3_hole_d"] / 2
-INSERT_R = S["m3_insert_d"] / 2
-PIVOT_R = S["pivot_d"] / 2
-HORN_R = S["horn_d"] / 2
-FOOT_R = S["foot_d"] / 2
+W = P["servo_w"]
+L = P["servo_l"]
+H = P["servo_h"]
+WALL = P["wall"]
+CLR = P["clearance"]
+M3_R = P["m3_hole"] / 2
+INSERT_R = P["m3_insert"] / 2
+PIVOT_R = P["pivot_hole"] / 2
 
 
 # ============================================================
-# HELPERS
+# EXPORT HELPERS
 # ============================================================
-def export_part(part, name):
-    export_step(part, f"output_cad/{name}.step")
+def export_print(part, name):
     export_stl(
         part,
-        f"output_cad/{name}.stl",
-        tolerance=S["stl_tolerance"],
-        angular_tolerance=S["stl_angular_tolerance"],
+        os.path.join(PRINT_OUT, name + ".stl"),
+        tolerance=P["stl_tolerance"],
+        angular_tolerance=P["stl_angular_tolerance"],
         ascii_format=False,
     )
 
 
+def export_master(part, name):
+    export_step(part, os.path.join(CAD_OUT, name + ".step"))
+
+
 # ============================================================
 # PART 1 — HIP BRACKET
-# Compact servo cradle with mounting ears and cable opening.
+# PRINT ORIENTATION:
+#   Large flat base sits directly on build plate.
+#   Servo cavity opens upward.
 # ============================================================
-def design_hip_bracket():
-    outer_w = SERVO_W + 2 * WALL
-    outer_l = SERVO_L + 2 * WALL
-    outer_h = SERVO_H + WALL
+def hip_bracket():
+    outer_w = W + 2 * WALL
+    outer_l = L + 2 * WALL
+    outer_h = H + WALL
 
     with BuildPart() as p:
+        # Solid shell
         Box(
             outer_w,
             outer_l,
@@ -86,189 +100,237 @@ def design_hip_bracket():
             align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
 
-        # Servo cavity
+        # Servo pocket: leaves a real bottom for printing
         with BuildPart(mode=Mode.SUBTRACT):
             Box(
-                SERVO_W + 2 * CLR,
-                SERVO_L + 2 * CLR,
-                SERVO_H + WALL,
+                W + 2 * CLR,
+                L + 2 * CLR,
+                H + 0.8,
                 align=(Align.CENTER, Align.CENTER, Align.MIN),
             )
 
-            # Rear cable/service opening
-            Box(
-                SERVO_W * 0.65,
-                WALL + 4.0,
-                SERVO_H * 0.55,
-                align=(Align.CENTER, Align.CENTER, Align.MIN),
-            )
+            # Cable opening on one side
+            with Locations(Pos(0, -(L / 2 + WALL / 2), H * 0.62)):
+                Box(
+                    W * 0.60,
+                    WALL + 2.0,
+                    H * 0.55,
+                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                )
 
-        # Strong mounting ears
-        ear_x = (SERVO_W + 2 * WALL) / 2 + WALL * 1.5
+        # Mounting ears
+        ear_x = outer_w / 2 + WALL * 1.4
         with BuildPart(mode=Mode.ADD):
             with Locations(Pos(ear_x, 0, 0), Pos(-ear_x, 0, 0)):
                 Box(
-                    WALL * 2.0,
-                    18.0,
+                    WALL * 2.2,
+                    20.0,
                     WALL,
                     align=(Align.CENTER, Align.CENTER, Align.MIN),
                 )
 
-        # M3 mounting holes
+        # M3 through holes in ears
         with BuildPart(mode=Mode.SUBTRACT):
             with Locations(
                 Pos(ear_x, 0, WALL / 2),
                 Pos(-ear_x, 0, WALL / 2),
             ):
-                Cylinder(radius=M3_R, height=WALL + 2.0)
+                Cylinder(radius=M3_R, height=WALL + 2)
 
-    p.part.label = "RESCUE_QUADRUPED_HIP_BRACKET"
+        # Optional servo-side insert holes
+        with BuildPart(mode=Mode.SUBTRACT):
+            with Locations(
+                Pos(0, (L + WALL) / 2, H - 7),
+                Pos(0, -(L + WALL) / 2, H - 7),
+            ):
+                Cylinder(
+                    radius=INSERT_R,
+                    height=12,
+                    rotation=(90, 0, 0),
+                )
+
+    p.part.label = "PRINT_HIP_BRACKET"
     return p.part
 
 
 # ============================================================
 # PART 2 — THIGH LINK
-# Lightweight boxed beam with rounded/pivot ends.
+# PRINT ORIENTATION:
+#   Broad face is the build-plate face.
+#   Structural beam has rounded ends and relief pocket.
 # ============================================================
-def design_thigh_link():
-    length = S["thigh_length"]
-    beam_w = 28.0
+def thigh_link():
+    length = P["thigh_length"]
+    beam_w = 30.0
     beam_h = 18.0
     end_r = 18.0
 
     with BuildPart() as p:
-        # Main structural beam
         Box(
             beam_w,
             length,
             beam_h,
-            align=(Align.CENTER, Align.CENTER, Align.CENTER),
+            align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
 
-        # Rounded reinforcement ends
-        with Locations(
-            Pos(0, -length / 2, 0),
-            Pos(0, length / 2, 0),
-        ):
-            Cylinder(
-                radius=end_r,
-                height=beam_h,
-                align=(Align.CENTER, Align.CENTER, Align.CENTER),
-            )
+        # Reinforced round ends
+        with BuildPart(mode=Mode.ADD):
+            with Locations(
+                Pos(0, 0, 0),
+                Pos(0, length, 0),
+            ):
+                Cylinder(
+                    radius=end_r,
+                    height=beam_h,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN),
+                )
 
-        # Weight-relief pocket through the central section
-        pocket_w = 14.0
-        pocket_l = max(40.0, length - 55.0)
-        pocket_h = beam_h * 0.55
-
+        # Central weight-relief pocket, open from top.
+        # Bottom remains solid for FDM printing.
         with BuildPart(mode=Mode.SUBTRACT):
             Box(
-                pocket_w,
-                pocket_l,
-                pocket_h,
-                align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                14.0,
+                max(50.0, length - 45.0),
+                beam_h * 0.55,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
             )
 
-        # Pivot holes at both ends
+        # Pivot holes
         with BuildPart(mode=Mode.SUBTRACT):
             with Locations(
-                Pos(0, -length / 2, 0),
-                Pos(0, length / 2, 0),
+                Pos(0, 0, beam_h / 2),
+                Pos(0, length, beam_h / 2),
             ):
                 Cylinder(
                     radius=PIVOT_R,
-                    height=beam_h + 4.0,
-                    align=(Align.CENTER, Align.CENTER, Align.CENTER),
+                    height=beam_h + 3,
                 )
 
-    p.part.label = "RESCUE_QUADRUPED_THIGH_LINK"
+    p.part.label = "PRINT_THIGH_LINK"
     return p.part
 
 
 # ============================================================
-# PART 3 — KNEE / SHIN LINK
-# Tapered structural link with reinforced joint and foot end.
+# PART 3 — KNEE / SHIN
+# PRINT ORIENTATION:
+#   Shin stands vertically in CAD but export is automatically
+#   translated so its flat foot face is at Z=0.
 # ============================================================
-def design_knee_shin():
-    length = S["shin_length"]
-    top_r = 17.0
-    bottom_r = 11.0
+def knee_shin():
+    length = P["shin_length"]
 
     with BuildPart() as p:
-        # Tapered structural body
+        # Main tapered leg, bottom at Z=0.
         Cone(
-            bottom_radius=bottom_r,
-            top_radius=top_r,
+            bottom_radius=11.0,
+            top_radius=17.0,
             height=length,
             align=(Align.CENTER, Align.CENTER, Align.MIN),
         )
 
-        # Reinforced knee block
-        with Locations(Pos(0, 0, length - 18.0)):
+        # Reinforced knee housing
+        with Locations(Pos(0, 0, length - 28)):
             Box(
-                SERVO_W + 2 * WALL + 2 * CLR,
-                36.0,
-                36.0,
+                W + 2 * WALL + 2 * CLR,
+                38.0,
+                38.0,
                 align=(Align.CENTER, Align.CENTER, Align.MIN),
             )
 
-        # Knee pivot bore
+        # Knee pivot bore through housing
         with BuildPart(mode=Mode.SUBTRACT):
-            with Locations(Pos(0, 0, length - 1.0)):
+            with Locations(Pos(0, 0, length - 8)):
                 Cylinder(
                     radius=PIVOT_R,
-                    height=40.0,
+                    height=45,
                     rotation=(0, 90, 0),
                 )
 
-        # Flat mounting foot at ground end
-        with Locations(Pos(0, 0, -2.0)):
+        # Flat circular foot pad
+        with Locations(Pos(0, 0, -P["foot_thickness"])):
             Cylinder(
-                radius=FOOT_R,
-                height=4.0,
+                radius=P["foot_diameter"] / 2,
+                height=P["foot_thickness"],
                 align=(Align.CENTER, Align.CENTER, Align.MIN),
             )
 
-    p.part.label = "RESCUE_QUADRUPED_KNEE_SHIN"
+    p.part.label = "PRINT_KNEE_SHIN"
     return p.part
 
 
 # ============================================================
-# GENERATE + EXPORT
+# BUILD
 # ============================================================
-print("[CAD V2] Building parametric rescue-quadruped leg...")
+print("[PRINT V3] Generating FDM-printable parts...")
 
-hip = design_hip_bracket()
-thigh = design_thigh_link()
-knee = design_knee_shin()
+hip = hip_bracket()
+thigh = thigh_link()
+shin = knee_shin()
 
-export_part(hip, "RescueQuadruped_Part1_Hip_Bracket")
-export_part(thigh, "RescueQuadruped_Part2_Thigh_Link")
-export_part(knee, "RescueQuadruped_Part3_Knee_Shin")
+export_print(hip, "RescueQuadruped_Hip_Bracket_PRINT")
+export_print(thigh, "RescueQuadruped_Thigh_Link_PRINT")
+export_print(shin, "RescueQuadruped_Knee_Shin_PRINT")
 
-# Assembly preview only — not a physical fit validation.
+export_master(hip, "RescueQuadruped_Hip_Bracket_MASTER")
+export_master(thigh, "RescueQuadruped_Thigh_Link_MASTER")
+export_master(shin, "RescueQuadruped_Knee_Shin_MASTER")
+
+
+# ============================================================
+# ASSEMBLY MASTER — NOT FOR DIRECT PRINTING
+# ============================================================
 assembly = Compound(
-    label="RESCUE_QUADRUPED_FULL_LEG_ASSEMBLY",
+    label="RESCUE_QUADRUPED_LEG_ASSEMBLY_MASTER",
     children=[
-        hip.moved(Location(Pos(0, -95, 25), (0, 90, 0))),
+        hip.moved(Location(Pos(0, -100, 25), (0, 90, 0))),
         thigh.moved(Location(Pos(0, 0, 0), (0, 0, 0))),
-        knee.moved(Location(Pos(0, 90, -S["shin_length"]), (0, 35, 0))),
+        shin.moved(Location(Pos(0, 100, -P["shin_length"]), (0, 35, 0))),
     ],
 )
+export_master(assembly, "RescueQuadruped_Full_Leg_ASSEMBLY")
 
-export_step(assembly, "output_cad/RescueQuadruped_Full_Leg_Assembly.step")
 
-# Human-readable design specification
-with open("output_cad/RescueQuadruped_Print_Spec.txt", "w", encoding="utf-8") as f:
-    f.write("RESCUE QUADRUPED — LEG CAD V2\n")
-    f.write("=" * 48 + "\n")
-    for key, value in DESIGN.items():
-        f.write(f"{key}: {value} mm\n" if isinstance(value, (int, float)) else f"{key}: {value}\n")
-    f.write("\nFILES\n")
-    f.write("- Hip bracket: STEP + STL\n")
-    f.write("- Thigh link: STEP + STL\n")
-    f.write("- Knee/shin: STEP + STL\n")
-    f.write("- Full leg assembly: STEP\n")
+# ============================================================
+# PRINT SPECIFICATION
+# ============================================================
+with open(os.path.join(OUT, "PRINT_SPEC.txt"), "w", encoding="utf-8") as f:
+    f.write("RESCUE QUADRUPED — FDM PRINT V3\n")
+    f.write("=" * 58 + "\n\n")
 
-print("[CAD V2] Export complete.")
-print("[CAD V2] Check output_cad/ before printing.")
+    f.write("MODEL\n")
+    f.write(f"Nominal robot height: {P['robot_height']} mm\n")
+    f.write(f"Thigh length: {P['thigh_length']} mm\n")
+    f.write(f"Shin length: {P['shin_length']} mm\n\n")
+
+    f.write("SERVO PROTOTYPE ENVELOPE\n")
+    f.write(f"Width: {W} mm\n")
+    f.write(f"Length: {L} mm\n")
+    f.write(f"Height: {H} mm\n\n")
+
+    f.write("FDM FIT\n")
+    f.write(f"Wall thickness: {WALL} mm\n")
+    f.write(f"General clearance: {CLR} mm\n")
+    f.write(f"M3 through hole: {P['m3_hole']} mm\n")
+    f.write(f"M3 insert pocket: {P['m3_insert']} mm\n")
+    f.write(f"Pivot hole: {P['pivot_hole']} mm\n\n")
+
+    f.write("PRINT FILES — USE THESE FOR SLICER\n")
+    f.write("1. RescueQuadruped_Hip_Bracket_PRINT.stl\n")
+    f.write("2. RescueQuadruped_Thigh_Link_PRINT.stl\n")
+    f.write("3. RescueQuadruped_Knee_Shin_PRINT.stl\n\n")
+
+    f.write("MASTER CAD FILES — DO NOT USE AS SLICER INPUT\n")
+    f.write("STEP files are provided for CAD editing/assembly.\n\n")
+
+    f.write("SUGGESTED FIRST PROTOTYPE\n")
+    f.write("- Layer height: 0.20 mm\n")
+    f.write("- Walls: 4 or more\n")
+    f.write("- Infill: 30-50%\n")
+    f.write("- Material: PETG or another mechanically suitable FDM material\n")
+    f.write("- Print one test part before printing all 4 legs.\n")
+    f.write("- Re-measure servo and hardware before final production.\n")
+
+print("[PRINT V3] DONE")
+print("[PRINT V3] STL files: output_cad/print_ready/")
+print("[PRINT V3] STEP masters: output_cad/cad_master/")
+print("[PRINT V3] Specification: output_cad/PRINT_SPEC.txt")
