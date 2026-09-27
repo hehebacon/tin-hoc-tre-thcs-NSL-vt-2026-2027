@@ -186,17 +186,24 @@ void processCommand(String command)
     if (command == "center") {
         if (safetyStopLatched || !motionSafety.allowed()) { Serial.println("[SAFETY] E-STOP active"); return; }
         motionController.center();
+        motionSafety.noteMotionCommand();
         return;
     }
 
     if (command == "stand") {
         if (safetyStopLatched || !motionSafety.allowed()) { Serial.println("[SAFETY] E-STOP active"); return; }
         motionController.stand();
+        motionSafety.noteMotionCommand();
         return;
     }
 
     if (command == "enable") {
+        if (safetyStopLatched || !motionSafety.allowed()) {
+            Serial.println("[SAFETY] enable blocked");
+            return;
+        }
         motionController.enable();
+        motionSafety.noteMotionCommand();
         return;
     }
 
