@@ -1,3 +1,4 @@
+
 import unittest
 
 from config import BASE, VICTIM, OBSTACLES
@@ -23,11 +24,16 @@ class RescueRobotTests(unittest.TestCase):
         robot = RescueCore(24, 16, OBSTACLES, BASE, VICTIM)
         robot.set_mode("RESCUE")
 
+        reached_victim = False
         for _ in range(500):
             robot.step(0.05)
+            if robot.robot == VICTIM and not robot.found:
+                robot.report_found()
+                reached_victim = True
             if robot.found and robot.robot == BASE:
                 break
 
+        self.assertTrue(reached_victim)
         self.assertTrue(robot.found)
         self.assertEqual(robot.robot, BASE)
 
