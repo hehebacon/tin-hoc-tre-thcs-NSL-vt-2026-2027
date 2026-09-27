@@ -1,4 +1,7 @@
 #include "ServoManager.h"
+#include "PCA9685ServoDriver.h"
+
+static PCA9685ServoDriver hardwareDriver;
 
 // ============================================================
 // BEGIN
@@ -11,7 +14,8 @@ void ServoManager::begin()
         enabled[i] = true;
     }
 
-    Serial.println("[SERVO] Manager initialized");
+    hardwareDriver.begin();
+    Serial.printf("[SERVO] Manager initialized | PCA9685=%s\n", hardwareDriver.available() ? "ONLINE" : "OFFLINE");
 }
 
 // ============================================================
@@ -58,10 +62,8 @@ void ServoManager::setAngle(
     angle = clampAngle(angle);
     angles[channel] = angle;
 
-    // Hardware integration point:
-    // PCA9685.setPWM(channel, 0, pulse);
-    //
-    // No real servo is driven in the current software stage.
+    if (enabled[channel])
+        hardwareDriver.setAngle(static_cast<uint8_t>(channel), angle);
 
     Serial.printf(
         "[SERVO] CH%02d -> %d deg\n",
@@ -111,6 +113,7 @@ void ServoManager::disableAll()
     for (int i = 0; i < SERVO_COUNT; i++)
         enabled[i] = false;
 
+    hardwareDriver.disableAll();
     Serial.println("[SERVO] All servos disabled");
 }
 
