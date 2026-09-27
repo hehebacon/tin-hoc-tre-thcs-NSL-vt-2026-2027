@@ -1,4 +1,9 @@
 #include "MotionController.h"
+#include "EnvironmentalSensors.h"
+#include "ImuInterface.h"
+
+static EnvironmentalSensors environment;
+static ImuInterface imu;
 
 const uint8_t MotionController::SERVO_MAP[LEG_COUNT][3] = {
     {0, 1, 2},
@@ -25,10 +30,12 @@ void MotionController::begin()
 {
     calibrator.begin();
     servoManager.begin();
+    environment.begin();
+    imu.begin();
     resetLegStates();
 
     Serial.println("[MOTION] Controller initialized");
-    Serial.println("[MOTION] Hardware mode: SIMULATION");
+    Serial.println("[MOTION] Hardware adapter initialized");
 }
 
 void MotionController::resetLegStates()
@@ -454,7 +461,7 @@ void MotionController::debug() const
     );
 
     Serial.println(
-        "       PCA9685 : OFFLINE"
+        "       PCA9685 : guarded hardware adapter"
     );
 
     Serial.println(
