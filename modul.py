@@ -221,6 +221,219 @@ def knee_shin():
     return part.fuse(foot)
 
 
+def shoulder_armor():
+    """Stylized shoulder shell that hides the servo housing."""
+    w = W + 24
+    d = 48
+    h = 18
+    part = Box(w, d, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    part = part.fuse(
+        Cone(w * 0.48, w * 0.34, 12,
+             align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, 0, h))
+    )
+    # Mechanical side fins.
+    for x in (-w * 0.42, w * 0.42):
+        part = part.fuse(
+            Box(7, 30, 12, align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((x, 0, 4))
+        )
+    # M3 service holes.
+    for x in (-w * 0.30, w * 0.30):
+        part = part.cut(
+            Cylinder(M3_R, h + 4,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((x, 0, -1))
+        )
+    return part
+
+
+def thigh_armor():
+    """Slim upper-leg armor with a raised mechanical spine."""
+    ln = P["thigh_length"]
+    w = 38
+    t = 5
+    part = Box(w, ln * 0.78, t,
+               align=(Align.CENTER, Align.CENTER, Align.MIN))
+    # Tapered-looking nose and rear cap.
+    part = part.fuse(
+        Cone(w * 0.55, w * 0.38, 10,
+             align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln * 0.78, 0))
+    )
+    part = part.fuse(
+        Box(10, ln * 0.62, 12,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln * 0.08, t))
+    )
+    # Two angular side rails.
+    for x in (-w * 0.38, w * 0.38):
+        part = part.fuse(
+            Box(5, ln * 0.52, 8,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((x, ln * 0.18, t))
+        )
+    return part
+
+
+def shin_armor():
+    """Lower-leg armor plate with compact spider/mecha geometry."""
+    ln = P["shin_length"]
+    w = 34
+    t = 5
+    part = Box(w, ln * 0.64, t,
+               align=(Align.CENTER, Align.CENTER, Align.MIN))
+    part = part.fuse(
+        Box(w + 10, 34, 9,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln * 0.44, t))
+    )
+    part = part.fuse(
+        Box(w * 0.72, 40, 8,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, ln * 0.72, t))
+    )
+    return part
+
+
+def foot_claw():
+    """Wide rescue foot with three simple traction claws."""
+    base = Box(48, 58, 7,
+               align=(Align.CENTER, Align.CENTER, Align.MIN))
+    base = base.fuse(
+        Cylinder(18, 8, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, 20, 0))
+    )
+    for x in (-15, 0, 15):
+        base = base.fuse(
+            Cone(6, 1.8, 26,
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .rotate(Axis.X, -18)
+            .translate((x, 43, 2))
+        )
+    # Grip ribs.
+    for y in (8, 22, 36):
+        base = base.fuse(
+            Box(34, 4, 3,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, y, 7))
+        )
+    return base
+
+
+def body_side_armor():
+    """Layered side armor for a finished rescue-mecha silhouette."""
+    bw = P["body_width"]
+    bl = P["body_length"]
+    h = P["body_height"]
+    plate = Box(8, bl * 0.56, h * 0.48,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+    plate = plate.fuse(
+        Box(14, bl * 0.26, h * 0.34,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, -bl * 0.13, h * 0.38))
+    )
+    # Raised armor ribs.
+    for y in (-bl * 0.18, 0, bl * 0.18):
+        plate = plate.fuse(
+            Box(12, 6, h * 0.30,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, y, h * 0.16))
+        )
+    return plate
+
+
+def head_crest():
+    """Dragon/mecha dorsal crest for the head."""
+    crest = Box(10, 42, 8,
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
+    for y, z, r in ((-15, 8, 9), (0, 13, 7), (15, 17, 5)):
+        crest = crest.fuse(
+            Cone(r, 1.2, 18,
+                 align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((0, y, z))
+        )
+    return crest
+
+
+def neck_ring():
+    """Armored neck collar between head and body."""
+    outer = Cylinder(30, 10, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    inner = Cylinder(19, 12, align=(Align.CENTER, Align.CENTER, Align.MIN)).translate((0, 0, -1))
+    ring = outer.cut(inner)
+    for a in (0, 90, 180, 270):
+        x = 24 if a in (0, 180) else 0
+        y = 24 if a in (90, 270) else 0
+        ring = ring.fuse(
+            Cylinder(6, 6, align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((x, y, 2))
+        )
+    return ring
+
+
+def sensor_pod():
+    """Front sensor/camera pod placeholder for future perception hardware."""
+    pod = Box(34, 28, 20, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    pod = pod.fuse(
+        Cone(18, 10, 12, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        .translate((0, -4, 20))
+    )
+    for x in (-9, 9):
+        pod = pod.cut(
+            Cylinder(4.2, 12,
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .translate((x, -1, 14))
+        )
+    return pod
+
+
+def rescue_beacon():
+    """Small roof beacon / status-light housing."""
+    base = Cylinder(13, 5, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    dome = Sphere(10).translate((0, 0, 5))
+    return base.fuse(dome)
+
+
+def tail_armor_segment():
+    """Decorative armored collar that can be repeated along the tail."""
+    outer = Cylinder(24, 8, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    inner = Cylinder(15, 10, align=(Align.CENTER, Align.CENTER, Align.MIN)).translate((0, 0, -1))
+    ring = outer.cut(inner)
+    for a in (0, 90, 180, 270):
+        ring = ring.fuse(
+            Box(7, 18, 5,
+                align=(Align.CENTER, Align.CENTER, Align.MIN))
+            .rotate(Axis.Z, a)
+            .translate((0, 0, 2))
+        )
+    return ring
+
+
+def cable_clip():
+    """Tiny snap-on cable guide for servo wiring."""
+    outer = Box(14, 12, 8, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    slot = Box(8, 8, 6, align=(Align.CENTER, Align.CENTER, Align.MIN)).translate((0, 0, 3))
+    return outer.cut(slot)
+
+
+def accessory_kit():
+    """Complete visual accessory set for the finished robot."""
+    return Compound(children=[
+        shoulder_armor(),
+        thigh_armor(),
+        shin_armor(),
+        foot_claw(),
+        body_side_armor(),
+        head_crest(),
+        neck_ring(),
+        sensor_pod(),
+        rescue_beacon(),
+        tail_armor_segment(),
+        cable_clip(),
+    ])
+
+
+
 def body_shell():
  bl,bw,bh=P["body_length"],P["body_width"],P["body_height"]; part=Box(bw,bl,bh,align=(Align.CENTER,Align.CENTER,Align.MIN))
  for y in (-bl*.42,bl*.40): part=part.fuse(Sphere(bw*.42).translate((0,y,bh*.48)))
@@ -263,10 +476,28 @@ def dragon_tail_tip():
  return Cone(7,.5,42,align=(Align.CENTER,Align.CENTER,Align.MIN)).fuse(Cone(5,.2,22,align=(Align.CENTER,Align.CENTER,Align.MIN)).translate((0,17,7)))
 
 if __name__=="__main__":
- print("[PRINT V6] Generating stable dragon modules...")
+ print("[PRINT V7] Generating full dragon-mecha modules + accessory kit...")
  parts=[("RescueQuadruped_Dragon_Hip_Bracket_PRINT",hip_bracket()),("RescueQuadruped_Dragon_Thigh_Link_PRINT",thigh_link()),("RescueQuadruped_Dragon_Knee_Shin_PRINT",knee_shin()),("RescueQuadruped_Dragon_Body_PRINT",body_shell()),("RescueQuadruped_Dragon_Head_EyeHoles_PRINT",dragon_head())]
  for name,part in parts: export_print(part,name); export_master(part,name.replace("_PRINT","_MASTER"))
  for i in range(P["tail_modules"]):
   part=dragon_tail_module(i); export_print(part,f"RescueQuadruped_Dragon_Tail_{i+1:02d}_PRINT"); export_master(part,f"RescueQuadruped_Dragon_Tail_{i+1:02d}_MASTER")
  tip=dragon_tail_tip(); export_print(tip,"RescueQuadruped_Dragon_Tail_Tip_PRINT"); export_master(tip,"RescueQuadruped_Dragon_Tail_Tip_MASTER")
- print("[PRINT V6] DONE")
+ accessories=[
+  ("Shoulder_Armor",shoulder_armor()),
+  ("Thigh_Armor",thigh_armor()),
+  ("Shin_Armor",shin_armor()),
+  ("Foot_Claw",foot_claw()),
+  ("Body_Side_Armor",body_side_armor()),
+  ("Head_Crest",head_crest()),
+  ("Neck_Ring",neck_ring()),
+  ("Sensor_Pod",sensor_pod()),
+  ("Rescue_Beacon",rescue_beacon()),
+  ("Tail_Armor_Segment",tail_armor_segment()),
+  ("Cable_Clip",cable_clip()),
+ ]
+ for name,part in accessories:
+  export_print(part,f"RescueQuadruped_Dragon_{name}_PRINT")
+  export_master(part,f"RescueQuadruped_Dragon_{name}_MASTER")
+ export_print(accessory_kit(),"RescueQuadruped_Dragon_Accessory_Kit_PRINT")
+ export_master(accessory_kit(),"RescueQuadruped_Dragon_Accessory_Kit_MASTER")
+ print("[PRINT V7] DONE")
