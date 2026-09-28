@@ -43,7 +43,7 @@ public:
     bool validateFootTarget(float x, float y, float z) const;
 
     void setGait(const String& mode);
-    void stopGait();
+    void stopGait();\n    void jump();
     const GaitController& gait() const;
 
     void center();
