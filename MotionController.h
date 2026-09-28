@@ -43,7 +43,7 @@ public:
     bool validateFootTarget(float x, float y, float z) const;
 
     void setGait(const String& mode);
-    void stopGait();\n    void jump();
+    void stopGait();\n    void jump();\n    bool jumping() const;
     const GaitController& gait() const;
 
     void center();
@@ -71,7 +71,7 @@ private:
     ServoCalibrator calibrator;
     ServoManager servoManager;
     Kinematics kinematics;
-    GaitController gaitController;
+    GaitController gaitController;\n\n    enum class JumpPhase { IDLE, CROUCH, LOAD, PUSH, FLIGHT, TUCK, LAND, ABSORB, RECOVER };\n    JumpPhase jumpPhase;\n    unsigned long jumpPhaseStartedMs;\n    bool jumpActive;\n\n    void updateJump();\n    void applyJumpPose(float z);\n    void finishJump();
 
     LegState legs[LEG_COUNT];
 
