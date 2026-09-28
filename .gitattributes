@@ -1,0 +1,2 @@
+out/*.stl filter=lfs diff=lfs merge=lfs -text
+out/*.step filter=lfs diff=lfs merge=lfs -text
