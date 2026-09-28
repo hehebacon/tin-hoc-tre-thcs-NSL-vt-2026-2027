@@ -138,11 +138,15 @@ class RescueCore:
         self.searching = mode in ("RESCUE", "OSINT")
 
         if mode in ("PATROL", "RETURN_HOME", "DELIVER", "RECHARGE"):
-            self.gait.set_moveset("SLOW_WALK")
+            self.gait.set_moveset("STABLE_WALK")
         elif mode == "RESCUE":
             self.gait.set_moveset("RESCUE")
-        elif mode in ("EXPLORE", "AUTONOMOUS", "DEMO"):
-            self.gait.set_moveset("WALK")
+        elif mode in ("EXPLORE", "DEMO"):
+            self.gait.set_moveset("CRUISE")
+        elif mode == "AUTONOMOUS":
+            # Competition travel uses cruise by default; FAST can be selected
+            # explicitly after the physical platform is validated.
+            self.gait.set_moveset("CRUISE")
         elif mode in ("FOLLOW", "AVOID", "SEARCH", "INSPECT", "OSINT"):
             self.gait.set_moveset("SEARCH")
         elif mode == "CLIMB":
