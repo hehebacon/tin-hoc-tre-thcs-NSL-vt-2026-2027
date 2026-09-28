@@ -85,6 +85,7 @@ class RescueCore:
         "DEMO",
         "CALIBRATION",
         "CLIMB",
+        "JUMP",
     )
 
     def __init__(self, width, height, obstacles, base, victim):
