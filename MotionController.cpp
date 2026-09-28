@@ -298,91 +298,84 @@ void MotionController::applyJumpPose(float z)
     for (int i = 0; i < LEG_COUNT; ++i) {
         const float y = (i == FL || i == RL) ? 45.0f : -45.0f;
         if (!setFootTarget(static_cast<LegID>(i), 0.0f, y, z)) {
-            Serial.printf("[JUMP] IK REJECT %s Z=%.1f\\n", LEG_NAMES[i], z);
+            Serial.printf("[JUMP] IK REJECT %s Z=%.1f\n", LEG_NAMES[i], z);
             finishJump();
             return;
         }
     }
 }
 
+float MotionController::jumpPhaseProgress(
+    unsigned long elapsed,
+    unsigned long duration
+) const
+{
+    if (duration == 0)
+        return 1.0f;
+
+    float p = static_cast<float>(elapsed) / static_cast<float>(duration);
+
+    if (p < 0.0f) return 0.0f;
+    if (p > 1.0f) return 1.0f;
+
+    // Smoothstep keeps the transition softer than a hard position jump.
+    return p * p * (3.0f - 2.0f * p);
+}
+
 void MotionController::updateJump()
 {
     const unsigned long elapsed = millis() - jumpPhaseStartedMs;
 
+    unsigned long duration = 0;
+    float fromZ = -90.0f;
+    float toZ = -90.0f;
+    JumpPhase next = jumpPhase;
+
     switch (jumpPhase) {
         case JumpPhase::CROUCH:
-            if (elapsed >= 220) {
-                jumpPhase = JumpPhase::LOAD;
-                jumpPhaseStartedMs = millis();
-                applyJumpPose(-112.0f);
-                Serial.println("[JUMP] LOAD");
-            }
+            duration = 220; fromZ = -90.0f; toZ = -106.0f; next = JumpPhase::LOAD;
             break;
-
         case JumpPhase::LOAD:
-            if (elapsed >= 160) {
-                jumpPhase = JumpPhase::PUSH;
-                jumpPhaseStartedMs = millis();
-                applyJumpPose(-70.0f);
-                Serial.println("[JUMP] PUSH");
-            }
+            duration = 160; fromZ = -106.0f; toZ = -112.0f; next = JumpPhase::PUSH;
             break;
-
         case JumpPhase::PUSH:
-            if (elapsed >= 140) {
-                jumpPhase = JumpPhase::FLIGHT;
-                jumpPhaseStartedMs = millis();
-                applyJumpPose(-70.0f);
-                Serial.println("[JUMP] FLIGHT");
-            }
+            duration = 140; fromZ = -112.0f; toZ = -62.0f; next = JumpPhase::FLIGHT;
             break;
-
         case JumpPhase::FLIGHT:
-            if (elapsed >= 280) {
-                jumpPhase = JumpPhase::TUCK;
-                jumpPhaseStartedMs = millis();
-                applyJumpPose(-76.0f);
-                Serial.println("[JUMP] TUCK");
-            }
+            duration = 280; fromZ = -62.0f; toZ = -68.0f; next = JumpPhase::TUCK;
             break;
-
         case JumpPhase::TUCK:
-            if (elapsed >= 120) {
-                jumpPhase = JumpPhase::LAND;
-                jumpPhaseStartedMs = millis();
-                applyJumpPose(-78.0f);
-                Serial.println("[JUMP] LAND");
-            }
+            duration = 120; fromZ = -68.0f; toZ = -76.0f; next = JumpPhase::LAND;
             break;
-
         case JumpPhase::LAND:
-            if (elapsed >= 120) {
-                jumpPhase = JumpPhase::ABSORB;
-                jumpPhaseStartedMs = millis();
-                applyJumpPose(-98.0f);
-                Serial.println("[JUMP] ABSORB");
-            }
+            duration = 120; fromZ = -76.0f; toZ = -90.0f; next = JumpPhase::ABSORB;
             break;
-
         case JumpPhase::ABSORB:
-            if (elapsed >= 180) {
-                jumpPhase = JumpPhase::RECOVER;
-                jumpPhaseStartedMs = millis();
-                applyJumpPose(-100.0f);
-                Serial.println("[JUMP] RECOVER");
-            }
+            duration = 180; fromZ = -90.0f; toZ = -100.0f; next = JumpPhase::RECOVER;
             break;
-
         case JumpPhase::RECOVER:
-            if (elapsed >= 220) {
-                finishJump();
-            }
+            duration = 220; fromZ = -100.0f; toZ = -90.0f; next = JumpPhase::IDLE;
             break;
-
         case JumpPhase::IDLE:
         default:
             finishJump();
-            break;
+            return;
+    }
+
+    const float p = jumpPhaseProgress(elapsed, duration);
+    const float z = fromZ + (toZ - fromZ) * p;
+    applyJumpPose(z);
+
+    if (elapsed >= duration) {
+        jumpPhase = next;
+        jumpPhaseStartedMs = millis();
+
+        if (jumpPhase == JumpPhase::IDLE) {
+            finishJump();
+            return;
+        }
+
+        Serial.printf("[JUMP] PHASE -> %d\n", static_cast<int>(jumpPhase));
     }
 }
 
