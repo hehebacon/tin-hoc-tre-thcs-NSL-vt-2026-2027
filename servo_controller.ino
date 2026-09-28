@@ -201,7 +201,7 @@ void emitTelemetry()
         safetyStopLatched ? "true" : "false",
         motionController.gait().mode(),
         motionController.gait().phase(),
-        motionController.gait().moving() ? "true" : "false",
+        (motionController.gait().moving() || motionController.jumping()) ? "true" : "false",
         hardwareStatusJson(status).c_str()
     );
 
@@ -230,6 +230,7 @@ void printHelp()
     Serial.println("SYSTEM");
     Serial.println("  help | status | center | stand | enable | disable | debug");
     Serial.println("  stop | resume | jump");
+    Serial.println("    jump = CROUCH -> LOAD -> PUSH -> FLIGHT -> TUCK -> LAND -> ABSORB -> RECOVER");
     Serial.println();
     Serial.println("AUTONOMY");
     Serial.println("  goal RESCUE");
@@ -680,6 +681,11 @@ void loop()
 
         lastMotionMs = now;
         robotCore.update(dt);
+        if (motionController.jumping()) {
+            // Keep the safety watchdog alive only while the bounded jump
+            // state machine is actively producing motion commands.
+            motionSafety.noteMotionCommand();
+        }
     }
 
     while (Serial.available()) {
