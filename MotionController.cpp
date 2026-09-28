@@ -17,7 +17,10 @@ const char* const MotionController::LEG_NAMES[LEG_COUNT] = {
 };
 
 MotionController::MotionController()
-    : kinematics(COXA_LENGTH, FEMUR_LENGTH, TIBIA_LENGTH)
+    : kinematics(COXA_LENGTH, FEMUR_LENGTH, TIBIA_LENGTH),
+      jumpPhase(JumpPhase::IDLE),
+      jumpPhaseStartedMs(0),
+      jumpActive(false)
 {
     resetLegStates();
 }
@@ -30,6 +33,8 @@ void MotionController::begin()
     imu.begin();
     gaitController.reset();
     resetLegStates();
+    jumpPhase = JumpPhase::IDLE;
+    jumpActive = false;
 
     Serial.println("[MOTION] Controller initialized");
     Serial.println("[MOTION] Hardware adapter initialized");
@@ -37,6 +42,11 @@ void MotionController::begin()
 
 void MotionController::update(float dt)
 {
+    if (jumpActive) {
+        updateJump();
+        return;
+    }
+
     if (!gaitController.moving())
         return;
 
@@ -260,6 +270,129 @@ void MotionController::testIK(float x, float y, float z) const
 
     Serial.println("==========================================");
     Serial.println();
+}
+
+void MotionController::jump()
+{
+    if (jumpActive) {
+        Serial.println("[JUMP] Already active");
+        return;
+    }
+
+    gaitController.stop();
+    jumpActive = true;
+    jumpPhase = JumpPhase::CROUCH;
+    jumpPhaseStartedMs = millis();
+
+    Serial.println("[JUMP] START");
+    applyJumpPose(-90.0f);
+}
+
+bool MotionController::jumping() const
+{
+    return jumpActive;
+}
+
+void MotionController::applyJumpPose(float z)
+{
+    for (int i = 0; i < LEG_COUNT; ++i) {
+        const float y = (i == FL || i == RL) ? 45.0f : -45.0f;
+        if (!setFootTarget(static_cast<LegID>(i), 0.0f, y, z)) {
+            Serial.printf("[JUMP] IK REJECT %s Z=%.1f\\n", LEG_NAMES[i], z);
+            finishJump();
+            return;
+        }
+    }
+}
+
+void MotionController::updateJump()
+{
+    const unsigned long elapsed = millis() - jumpPhaseStartedMs;
+
+    switch (jumpPhase) {
+        case JumpPhase::CROUCH:
+            if (elapsed >= 220) {
+                jumpPhase = JumpPhase::LOAD;
+                jumpPhaseStartedMs = millis();
+                applyJumpPose(-112.0f);
+                Serial.println("[JUMP] LOAD");
+            }
+            break;
+
+        case JumpPhase::LOAD:
+            if (elapsed >= 160) {
+                jumpPhase = JumpPhase::PUSH;
+                jumpPhaseStartedMs = millis();
+                applyJumpPose(-70.0f);
+                Serial.println("[JUMP] PUSH");
+            }
+            break;
+
+        case JumpPhase::PUSH:
+            if (elapsed >= 140) {
+                jumpPhase = JumpPhase::FLIGHT;
+                jumpPhaseStartedMs = millis();
+                applyJumpPose(-70.0f);
+                Serial.println("[JUMP] FLIGHT");
+            }
+            break;
+
+        case JumpPhase::FLIGHT:
+            if (elapsed >= 280) {
+                jumpPhase = JumpPhase::TUCK;
+                jumpPhaseStartedMs = millis();
+                applyJumpPose(-76.0f);
+                Serial.println("[JUMP] TUCK");
+            }
+            break;
+
+        case JumpPhase::TUCK:
+            if (elapsed >= 120) {
+                jumpPhase = JumpPhase::LAND;
+                jumpPhaseStartedMs = millis();
+                applyJumpPose(-78.0f);
+                Serial.println("[JUMP] LAND");
+            }
+            break;
+
+        case JumpPhase::LAND:
+            if (elapsed >= 120) {
+                jumpPhase = JumpPhase::ABSORB;
+                jumpPhaseStartedMs = millis();
+                applyJumpPose(-98.0f);
+                Serial.println("[JUMP] ABSORB");
+            }
+            break;
+
+        case JumpPhase::ABSORB:
+            if (elapsed >= 180) {
+                jumpPhase = JumpPhase::RECOVER;
+                jumpPhaseStartedMs = millis();
+                applyJumpPose(-100.0f);
+                Serial.println("[JUMP] RECOVER");
+            }
+            break;
+
+        case JumpPhase::RECOVER:
+            if (elapsed >= 220) {
+                finishJump();
+            }
+            break;
+
+        case JumpPhase::IDLE:
+        default:
+            finishJump();
+            break;
+    }
+}
+
+void MotionController::finishJump()
+{
+    jumpActive = false;
+    jumpPhase = JumpPhase::IDLE;
+    jumpPhaseStartedMs = 0;
+    stand();
+    Serial.println("[JUMP] COMPLETE");
 }
 
 void MotionController::setGait(const String& mode)
