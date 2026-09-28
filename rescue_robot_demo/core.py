@@ -1,6 +1,6 @@
 from heapq import heappush, heappop
 
-from gait import GaitPlanner
+from gait import GaitPlanner, JumpPlanner
 from ik import QuadrupedIK
 
 
@@ -104,9 +104,9 @@ class RescueCore:
         self.path = []
         self.found = False
         self.searching = False
-        self.emergency_stop = False
+        self.emergency_stop = False\n        self.jump.stop()
 
-        self.gait = GaitPlanner()
+        self.gait = GaitPlanner()\n        self.jump = JumpPlanner()
         self.ik = QuadrupedIK()
         self.last_leg_targets = self.gait.snapshot(moving=False)
         self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
@@ -137,7 +137,7 @@ class RescueCore:
         self.last_target = None
         self.searching = mode in ("RESCUE", "OSINT")
 
-        if mode in ("PATROL", "RETURN_HOME", "DELIVER", "RECHARGE"):
+        if mode == "JUMP":\n            self.gait.set_moveset("IDLE")\n            self.jump.start()\n        elif mode in ("PATROL", "RETURN_HOME", "DELIVER", "RECHARGE"):
             self.gait.set_moveset("STABLE_WALK")
         elif mode == "RESCUE":
             self.gait.set_moveset("RESCUE")
@@ -219,7 +219,7 @@ class RescueCore:
             self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
             return
 
-        if self.mode in ("CLIMB", "CALIBRATION"):
+        if self.mode == "JUMP":\n            state = self.jump.update(dt)\n            self.last_leg_targets = {leg: self.jump.leg_pose(leg) for leg in self.gait.LEGS}\n            self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)\n            if self.jump.done:\n                self.mode = "PATROL"\n                self.gait.set_moveset("STABLE_WALK")\n                self.log_event("JUMP COMPLETE -> STABLE_WALK")\n            return\n\n        if self.mode in ("CLIMB", "CALIBRATION"):
             self.last_leg_targets = self.gait.update(dt, moving=False)
             self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
             return
@@ -262,6 +262,6 @@ class RescueCore:
         self.mode = "PATROL"
         self.last_target = None
         self.search_radius = 0
-        self.gait.reset()
+        self.gait.reset()\n        self.jump.stop()
         self.last_leg_targets = self.gait.snapshot(moving=False)
         self.log = ["SYSTEM RESET"]
