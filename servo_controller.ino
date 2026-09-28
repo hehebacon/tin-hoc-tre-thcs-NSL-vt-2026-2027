@@ -229,7 +229,7 @@ void printHelp()
     Serial.println("================================================");
     Serial.println("SYSTEM");
     Serial.println("  help | status | center | stand | enable | disable | debug");
-    Serial.println("  stop | resume");
+    Serial.println("  stop | resume | jump");
     Serial.println();
     Serial.println("AUTONOMY");
     Serial.println("  goal RESCUE");
@@ -517,7 +517,7 @@ void processCommand(String command)
         return;
     }
 
-    if (command == "stop") {
+    if (command == "jump") {\n        if (safetyStopLatched || !motionSafety.allowed()) {\n            Serial.println("[SAFETY] jump blocked");\n            return;\n        }\n\n        motionController.jump();\n        motionSafety.noteMotionCommand();\n        return;\n    }\n\n    if (command == "stop") {
         safetyStopLatched = true;
         motionSafety.emergencyStop();
         motionController.disable();
