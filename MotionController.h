@@ -83,6 +83,7 @@ private:
     void updateJump();
     void applyJumpPose(float z);
     void finishJump();
+    float jumpPhaseProgress(unsigned long elapsed, unsigned long duration) const;
 
     LegState legs[LEG_COUNT];
 
