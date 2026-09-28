@@ -74,3 +74,71 @@ class GaitPlanner:
                 "step_length_mm":round(self.step_length,2),
                 "step_height_mm":round(self.step_height,2),
                 "frequency_hz":round(self.frequency,3)}
+
+
+class JumpPlanner:
+    """Simulator-safe jump sequence using coordinated 3-DOF leg compression/extension.
+
+    This is a trajectory generator, not a claim that the physical robot can jump.
+    Physical jump must be validated for servo torque, structure, landing and safety.
+    """
+    PHASES=("CROUCH","LOAD","PUSH","FLIGHT","TUCK","LAND","ABSORB","RECOVER")
+
+    def __init__(self):
+        self.phase_index=0
+        self.t=0.0
+        self.active=False
+        self.done=False
+        self.duration={"CROUCH":0.22,"LOAD":0.16,"PUSH":0.14,"FLIGHT":0.28,
+                       "TUCK":0.12,"LAND":0.12,"ABSORB":0.18,"RECOVER":0.22}
+
+    @property
+    def phase(self):
+        return self.PHASES[self.phase_index]
+
+    def start(self):
+        self.phase_index=0
+        self.t=0.0
+        self.active=True
+        self.done=False
+
+    def stop(self):
+        self.active=False
+        self.done=False
+
+    def update(self,dt=0.02):
+        if not self.active:
+            return {"active":False,"phase":"IDLE","progress":0.0}
+        dt=max(0.001,min(0.05,float(dt)))
+        self.t+=dt
+        while self.t>=self.duration[self.phase]:
+            self.t-=self.duration[self.phase]
+            if self.phase_index>=len(self.PHASES)-1:
+                self.active=False
+                self.done=True
+                return {"active":False,"phase":"DONE","progress":1.0}
+            self.phase_index+=1
+        total=self.duration[self.phase]
+        p=max(0.0,min(1.0,self.t/total))
+        return {"active":True,"phase":self.phase,"progress":p}
+
+    def leg_pose(self,leg):
+        # x/y remain planted relative to the body; z changes through
+        # coordinated compression -> extension -> flight -> absorption.
+        y={"FL":45.0,"RL":45.0,"FR":-45.0,"RR":-45.0}[leg]
+        z0=-90.0
+        if self.phase=="CROUCH":
+            p=self.t/self.duration["CROUCH"]; z=z0-22.0*p
+        elif self.phase=="LOAD":
+            p=self.t/self.duration["LOAD"]; z=-112.0
+        elif self.phase=="PUSH":
+            p=self.t/self.duration["PUSH"]; z=-112.0+42.0*p
+        elif self.phase in ("FLIGHT","TUCK"):
+            z=-70.0
+        elif self.phase=="LAND":
+            p=self.t/self.duration["LAND"]; z=-70.0-20.0*p
+        elif self.phase=="ABSORB":
+            p=self.t/self.duration["ABSORB"]; z=-90.0-10.0*sin(p*pi)
+        else:
+            p=self.t/self.duration["RECOVER"]; z=-100.0+10.0*p
+        return LegTarget(0.0,y,z,self.phase)
