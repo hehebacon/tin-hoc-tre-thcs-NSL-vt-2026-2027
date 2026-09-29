@@ -431,10 +431,16 @@ def all_components():
 
 
 def fuse_all(parts):
-    result = None
-    for _, shape in parts:
-        result = shape if result is None else result.fuse(shape)
-    return result
+    """Build a non-boolean compound for assembly/reference operations.
+
+    Boolean-fusing 166 detailed dragon modules is extremely expensive and
+    unnecessary for bounding-box checks or a reference assembly export.
+    A Compound preserves every module while avoiding the expensive fuse tree.
+    """
+    shapes = [shape for _, shape in parts]
+    if not shapes:
+        raise ValueError("No CAD modules were generated.")
+    return Compound(shapes)
 
 
 def shape_size(shape):
@@ -540,7 +546,7 @@ def main():
 
     parts = all_components()
     print(f"[INFO] Raw modules: {len(parts)}")
-    print("[INFO] Measuring complete assembly before export...")
+    print("[INFO] Measuring module bounds (fast, no boolean fuse)...")
 
     parts, factor, before, after = scale_everything_to_competition(parts)
 
