@@ -4,7 +4,7 @@ import math
 import shutil
 
 # ============================================================
-# XZORT RESCUE DRAGON-SPIDER — 35cm competition build / 12 DOF
+# XZORT RESCUE DRAGON-LIZARD — 35cm competition build / 12 DOF — VERIFIED GROUPED BUILD
 # Full replacement CAD generator
 #
 # HARD LOCKS
@@ -610,10 +610,20 @@ def main():
     print(f"[INFO] Final bounding box: X={after[0]:.2f} Y={after[1]:.2f} Z={after[2]:.2f} mm")
 
     groups = grouped_exports(parts)
+    required = {"body", "head", "electronics", "FL_leg", "FR_leg", "RL_leg", "RR_leg", "tail"}
+    missing = required - set(groups)
+    if missing:
+        raise RuntimeError(f"Missing required printable groups: {sorted(missing)}")
     print(f"[INFO] Printable STL groups: {len(groups)}")
 
     for name, shape in groups.items():
         export_print_stl(name, shape)
+
+    # Final output sanity check: every expected printable module must exist.
+    expected_files = [OUT / "PRINT" / f"{name}.stl" for name in sorted(required)]
+    missing_files = [str(p) for p in expected_files if not p.is_file() or p.stat().st_size == 0]
+    if missing_files:
+        raise RuntimeError(f"STL export failed: {missing_files}")
 
     assembly = fuse_all(parts)
     export_reference_step("full_assembly", assembly)
