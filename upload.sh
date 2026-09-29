@@ -24,15 +24,19 @@ echo "Root: $ROOT"
 echo
 
 echo "[2/7] Python / build123d"
-PYTHON="python3"
+PYTHON="$ROOT/.venv/bin/python"
 
-if [ -x "$ROOT/.venv/bin/python" ]; then
-    PYTHON="$ROOT/.venv/bin/python"
+# Create an isolated environment automatically; avoids Kali/Debian PEP 668.
+if [ ! -x "$PYTHON" ]; then
+    echo "[INFO] Creating local Python environment: .venv"
+    if ! python3 -m venv "$ROOT/.venv"; then
+        echo "[ERROR] Python venv support is missing. Run: sudo apt install python3-venv"
+        exit 1
+    fi
 fi
 
 if ! "$PYTHON" -c "import build123d" >/dev/null 2>&1; then
-    echo "build123d is not installed."
-    echo "Installing build123d..."
+    echo "[INFO] Installing build123d into .venv..."
     "$PYTHON" -m pip install --upgrade pip
     "$PYTHON" -m pip install build123d
 fi
@@ -58,9 +62,18 @@ git lfs track "out/*.step"
 
 echo
 
-echo "[4/7] Building CAD"
+echo "[4/8] Cleaning old generated CAD"
 rm -rf "$ROOT/out"
 mkdir -p "$ROOT/out"
+
+# Remove old generated CAD already tracked in Git; source files are untouched.
+while IFS= read -r tracked; do
+    [ -n "$tracked" ] && git rm -f --ignore-unmatch -- "$tracked" >/dev/null 2>&1 || true
+done < <(git ls-files | grep -Ei "\\.(stl|step|stp)$" || true)
+
+echo
+
+echo "[5/8] Building CAD"
 
 "$PYTHON" "$ROOT/modul.py"
 
@@ -69,7 +82,7 @@ echo "Generated CAD files:"
 find "$ROOT/out" -maxdepth 1 -type f \( -name "*.stl" -o -name "*.step" \) -printf "  %f  %s bytes\n" | sort
 echo
 
-echo "[5/7] Git"
+echo "[6/8] Git"
 if [ ! -d "$ROOT/.git" ]; then
     git init
 fi
@@ -87,7 +100,7 @@ fi
 echo "Remote: $REPO"
 echo
 
-echo "[6/7] Adding ./out"
+echo "[7/8] Adding generated CAD"
 git add .gitattributes
 git add out/
 
@@ -103,7 +116,7 @@ else
 fi
 
 echo
-echo "[7/7] Pushing"
+echo "[8/8] Pushing"
 git push -u origin main
 
 echo
@@ -112,10 +125,10 @@ echo "             CAD UPLOAD DONE"
 echo "=========================================="
 echo
 echo "CAD location in GitHub:"
-echo "out/*.stl"
-echo "out/*.step"
+echo "out/PRINT/*.stl"
+echo "out/REF/full_assembly.step"
 echo
 echo "Next time:"
 echo "    ./upload.sh"
 echo
-echo "If modul.py changes, the same filenames are updated/replaced."
+echo "Old STL/STEP are removed before every build; grouped outputs replace them cleanly."
