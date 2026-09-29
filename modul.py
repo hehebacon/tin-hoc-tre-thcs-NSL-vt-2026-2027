@@ -524,8 +524,14 @@ def grouped_exports(parts):
 
     for name, shape in parts:
         n = name.lower()
-        if n.startswith(("fl_", "fr_", "rl_", "rr_")):
-            groups[n[:2] + "_leg"].append(shape)
+        if n.startswith("fl_"):
+            groups["FL_leg"].append(shape)
+        elif n.startswith("fr_"):
+            groups["FR_leg"].append(shape)
+        elif n.startswith("rl_"):
+            groups["RL_leg"].append(shape)
+        elif n.startswith("rr_"):
+            groups["RR_leg"].append(shape)
         elif n.startswith("tail_"):
             groups["tail"].append(shape)
         elif n in {"dragon_head", "head_sensor_mount"} or n.startswith("neck_"):

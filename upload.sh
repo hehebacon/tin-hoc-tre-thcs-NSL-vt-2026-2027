@@ -1,134 +1,139 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -e
-
-# ============================================================
-# XZORT RESCUE QUADRUPED — CAD BUILD + GITHUB UPLOADER
-# - Runs modul.py
-# - Generates CAD into ./out
-# - Uploads STL/STEP from ./out
-# - Same filename/path = Git replaces the previous version
-# - Large STL/STEP files use Git LFS
-# ============================================================
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-echo "=========================================="
-echo "   XZORT CAD -> GITHUB UPLOADER"
-echo "=========================================="
-echo
-
-echo "[1/7] Project"
-echo "Root: $ROOT"
-echo
-
-echo "[2/7] Python / build123d"
 PYTHON="$ROOT/.venv/bin/python"
 
-# Create an isolated environment automatically; avoids Kali/Debian PEP 668.
+echo "======================================================"
+echo " XZORT RESCUE DRAGON-LIZARD"
+echo " AUTO BUILD -> VALIDATE -> COMMIT -> PUSH"
+echo "======================================================"
+
+# ------------------------------------------------------
+# 1. Python environment
+# ------------------------------------------------------
+
 if [ ! -x "$PYTHON" ]; then
-    echo "[INFO] Creating local Python environment: .venv"
-    if ! python3 -m venv "$ROOT/.venv"; then
-        echo "[ERROR] Python venv support is missing. Run: sudo apt install python3-venv"
-        exit 1
-    fi
+    echo "[SETUP] Creating .venv..."
+    python3 -m venv "$ROOT/.venv"
 fi
 
 if ! "$PYTHON" -c "import build123d" >/dev/null 2>&1; then
-    echo "[INFO] Installing build123d into .venv..."
+    echo "[SETUP] Installing build123d..."
     "$PYTHON" -m pip install --upgrade pip
     "$PYTHON" -m pip install build123d
 fi
 
-echo "Python: $PYTHON"
-echo
+# ------------------------------------------------------
+# 2. Build CAD
+# ------------------------------------------------------
 
-echo "[3/7] Git LFS"
-if ! command -v git-lfs >/dev/null 2>&1; then
-    echo "ERROR: git-lfs is not installed."
-    echo
-    echo "Install it once with:"
-    echo "    sudo apt update && sudo apt install git-lfs"
-    echo "    git lfs install"
+echo
+echo "[BUILD] Running modul.py..."
+"$PYTHON" "$ROOT/modul.py"
+
+# ------------------------------------------------------
+# 3. Validate grouped output
+# ------------------------------------------------------
+
+PRINT="$ROOT/out/PRINT"
+REF="$ROOT/out/REF"
+
+REQUIRED=(
+    "body.stl"
+    "head.stl"
+    "electronics.stl"
+    "FL_leg.stl"
+    "FR_leg.stl"
+    "RL_leg.stl"
+    "RR_leg.stl"
+    "tail.stl"
+)
+
+echo
+echo "[CHECK] Checking grouped STL files..."
+
+for file in "${REQUIRED[@]}"; do
+    if [ ! -s "$PRINT/$file" ]; then
+        echo "[ERROR] Missing or empty: $PRINT/$file"
+        exit 1
+    fi
+    echo "[OK] $file"
+done
+
+if [ ! -s "$REF/full_assembly.step" ]; then
+    echo "[ERROR] Missing or empty: $REF/full_assembly.step"
     exit 1
 fi
 
-git lfs install
+echo "[OK] full_assembly.step"
 
-# Track heavy CAD binaries through Git LFS.
-git lfs track "out/*.stl"
-git lfs track "out/*.step"
-
-echo
-
-echo "[4/8] Cleaning old generated CAD"
-rm -rf "$ROOT/out"
-mkdir -p "$ROOT/out"
-
-# Remove old generated CAD already tracked in Git; source files are untouched.
-while IFS= read -r tracked; do
-    [ -n "$tracked" ] && git rm -f --ignore-unmatch -- "$tracked" >/dev/null 2>&1 || true
-done < <(git ls-files | grep -Ei "\\.(stl|step|stp)$" || true)
+# ------------------------------------------------------
+# 4. Make sure OLD individual outputs are NOT uploaded
+# ------------------------------------------------------
 
 echo
+echo "[CHECK] Removing old individual CAD outputs from Git..."
 
-echo "[5/8] Building CAD"
+git rm -r --cached --ignore-unmatch out/PRINT_* >/dev/null 2>&1 || true
+git rm -r --cached --ignore-unmatch out/REF_* >/dev/null 2>&1 || true
 
-"$PYTHON" "$ROOT/modul.py"
-
-echo
-echo "Generated CAD files:"
-find "$ROOT/out" -maxdepth 1 -type f \( -name "*.stl" -o -name "*.step" \) -printf "  %f  %s bytes\n" | sort
-echo
-
-echo "[6/8] Git"
-if [ ! -d "$ROOT/.git" ]; then
-    git init
-fi
-
-git branch -M main
-
-REPO="git@github.com:hehebacon/tin-hoc-tre-thcs-NSL-vt-2026-2027.git"
-
-if git remote get-url origin >/dev/null 2>&1; then
-    git remote set-url origin "$REPO"
-else
-    git remote add origin "$REPO"
-fi
-
-echo "Remote: $REPO"
-echo
-
-echo "[7/8] Adding generated CAD"
-git add .gitattributes
-git add out/
+# ------------------------------------------------------
+# 5. Stage current grouped output
+# ------------------------------------------------------
 
 echo
-echo "Changes:"
-git status --short
-echo
+echo "[GIT] Staging grouped CAD..."
+
+git add modul.py upload.sh out/
+
+# ------------------------------------------------------
+# 6. Commit
+# ------------------------------------------------------
 
 if git diff --cached --quiet; then
-    echo "No CAD changes to upload."
+    echo "[GIT] Nothing new to commit."
 else
-    git commit -m "Update generated CAD $(date '+%Y-%m-%d %H:%M:%S')"
+    git commit -m "Build grouped 35cm rescue dragon CAD"
 fi
 
-echo
-echo "[8/8] Pushing"
-git push -u origin main
+# ------------------------------------------------------
+# 7. Rebase remote changes
+# ------------------------------------------------------
 
 echo
-echo "=========================================="
-echo "             CAD UPLOAD DONE"
-echo "=========================================="
+echo "[GIT] Syncing with origin/main..."
+
+git pull --rebase origin main
+
+# ------------------------------------------------------
+# 8. Push
+# ------------------------------------------------------
+
 echo
-echo "CAD location in GitHub:"
-echo "out/PRINT/*.stl"
-echo "out/REF/full_assembly.step"
+echo "[GIT] Pushing to GitHub..."
+
+git push origin main
+
+# ------------------------------------------------------
+# 9. Final
+# ------------------------------------------------------
+
 echo
-echo "Next time:"
-echo "    ./upload.sh"
+echo "======================================================"
+echo "             BUILD + UPLOAD COMPLETE"
+echo "======================================================"
 echo
-echo "Old STL/STEP are removed before every build; grouped outputs replace them cleanly."
+echo "GitHub output:"
+echo "  out/PRINT/body.stl"
+echo "  out/PRINT/head.stl"
+echo "  out/PRINT/electronics.stl"
+echo "  out/PRINT/FL_leg.stl"
+echo "  out/PRINT/FR_leg.stl"
+echo "  out/PRINT/RL_leg.stl"
+echo "  out/PRINT/RR_leg.stl"
+echo "  out/PRINT/tail.stl"
+echo "  out/REF/full_assembly.step"
+echo
