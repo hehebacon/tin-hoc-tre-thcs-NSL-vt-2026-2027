@@ -1,5 +1,6 @@
 #include "GaitController.h"
 #include "RobotConfig.h"
+#include "FootTrajectory.h"
 #include <math.h>
 
 namespace {
@@ -49,28 +50,22 @@ void GaitController::setMode(const String& mode) {
     if (m == "STABLE" || m == "STABLE_WALK") {
         configure(24, 18, 1.10f);
         modeName = "STABLE_WALK";
-    }
-    else if (m == "WALK" || m == "CRUISE") {
+    } else if (m == "WALK" || m == "CRUISE") {
         configure(32, 20, 1.55f);
         modeName = (m == "CRUISE" ? "CRUISE" : "WALK");
-    }
-    else if (m == "FAST" || m == "FAST_WALK") {
+    } else if (m == "FAST" || m == "FAST_WALK") {
         configure(42, 24, 1.90f);
         modeName = "FAST";
-    }
-    else if (m == "SLOW_WALK") {
+    } else if (m == "SLOW_WALK") {
         configure(20, 16, 0.95f);
         modeName = "SLOW_WALK";
-    }
-    else if (m == "SEARCH") {
+    } else if (m == "SEARCH") {
         configure(18, 14, 0.80f);
         modeName = "SEARCH";
-    }
-    else if (m == "RESCUE") {
+    } else if (m == "RESCUE") {
         configure(14, 12, 0.70f);
         modeName = "RESCUE";
-    }
-    else {
+    } else {
         reset();
     }
 }
@@ -113,34 +108,32 @@ float GaitController::legY(GaitLeg leg) const {
 }
 
 float GaitController::phaseOffset(GaitLeg leg) const {
+    // Diagonal tripod groups: FL+RR / FR+RL.
     return (leg == GAIT_FL || leg == GAIT_RR) ? 0.0f : 0.5f;
 }
 
 FootTarget GaitController::calculate(GaitLeg leg) const {
-    FootTarget r = {0, legY(leg), bodyHeight, false};
+    const float y = legY(leg);
+    const float centerX = 0.0f;
+    const float phase = phaseValue - phaseOffset(leg);
+    const bool mirrored = (leg == GAIT_FR || leg == GAIT_RL);
 
-    if (speedValue <= 0.001f)
-        return r;
+    TrajectoryPoint p = FootTrajectory::tripod(
+        phase,
+        centerX,
+        y,
+        bodyHeight,
+        stepLengthValue * speedValue,
+        stepHeightValue * speedValue,
+        mirrored
+    );
 
-    float local = phaseValue - phaseOffset(leg);
-    while (local < 0) local += 1;
-    while (local >= 1) local -= 1;
-
-    const float length = stepLengthValue * speedValue;
-    const float height = stepHeightValue * speedValue;
-
-    if (local < 0.5f) {
-        const float p = local / 0.5f;
-        r.x = -length * 0.5f + p * length;
-        r.z = bodyHeight + height * sinf(p * PI);
-        r.swing = true;
-    }
-    else {
-        const float p = (local - 0.5f) / 0.5f;
-        r.x = length * 0.5f - p * length;
-    }
-
-    return r;
+    FootTarget result;
+    result.x = p.x;
+    result.y = p.y;
+    result.z = p.z;
+    result.swing = p.swing;
+    return result;
 }
 
 FootTarget GaitController::target(GaitLeg leg) const { return calculate(leg); }
