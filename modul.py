@@ -470,7 +470,12 @@ def scale_everything_to_competition(parts):
     # Scale each printable module independently. Do NOT measure the Compound
     # after scaling: in some build123d versions a Compound's bounding box can
     # retain the source-location envelope even when its child solids are scaled.
-    scaled = [(name, shape.scale(factor)) for name, shape in parts]
+    # Scale about the assembly origin, not each shape's own location.
+    # Shape.scale(factor) defaults to scaling around the object location, which
+    # shrinks each part but leaves the modules spread across the original
+    # 823 mm assembly envelope. Scaling about (0, 0, 0) transforms both the
+    # geometry and its assembly position by the same uniform factor.
+    scaled = [(name, scale(shape, by=factor, about=(0, 0, 0))) for name, shape in parts]
 
     # Compute the post-scale envelope directly from the transformed modules.
     # This is both fast and robust because the same scaled shapes are exported.
