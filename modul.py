@@ -1,6 +1,7 @@
 from build123d import *
 from pathlib import Path
 import math
+import shutil
 
 # ============================================================
 # XZORT RESCUE DRAGON-SPIDER — 35cm competition build / 12 DOF
@@ -23,7 +24,10 @@ import math
 # ============================================================
 
 OUT = Path("out")
-OUT.mkdir(exist_ok=True)
+# Generated CAD workspace: always start clean so stale STL/STEP files cannot mix.
+if OUT.exists():
+    shutil.rmtree(OUT)
+OUT.mkdir(parents=True, exist_ok=True)
 
 COMPETITION_MAX_MM = 350.0
 SAFETY_MARGIN_MM = 5.0
@@ -511,71 +515,92 @@ def scale_everything_to_competition(parts):
     return scaled, factor, before, after
 
 
-def export_pair(prefix, name, shape):
-    export_stl(shape, str(OUT / f"{prefix}_{name}.stl"))
-    export_step(shape, str(OUT / f"{prefix}_{name}.step"))
-    print(f"[OK] {prefix}_{name}")
+def grouped_exports(parts):
+    """Group many logical solids into a small number of printable STL modules."""
+    groups = {
+        "body": [], "head": [], "electronics": [],
+        "FL_leg": [], "FR_leg": [], "RL_leg": [], "RR_leg": [], "tail": [],
+    }
+
+    for name, shape in parts:
+        n = name.lower()
+        if n.startswith(("fl_", "fr_", "rl_", "rr_")):
+            groups[n[:2] + "_leg"].append(shape)
+        elif n.startswith("tail_"):
+            groups["tail"].append(shape)
+        elif n in {"dragon_head", "head_sensor_mount"} or n.startswith("neck_"):
+            groups["head"].append(shape)
+        elif n.startswith(("electronics_", "screen_")):
+            groups["electronics"].append(shape)
+        else:
+            groups["body"].append(shape)
+
+    return {name: Compound(shapes) for name, shapes in groups.items() if shapes}
 
 
-def manifest(parts, factor, before, after):
+def export_print_stl(name, shape):
+    path = OUT / "PRINT" / f"{name}.stl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    export_stl(shape, str(path))
+    print(f"[OK] PRINT/{name}.stl")
+
+
+def export_reference_step(name, shape):
+    path = OUT / "REF" / f"{name}.step"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    export_step(shape, str(path))
+    print(f"[OK] REF/{name}.step")
+
+
+def write_manifest(parts, factor, before, after, groups):
     lines = [
-        "XZORT RESCUE DRAGON-SPIDER — 35cm COMPETITION PRINT MANIFEST",
-        "=" * 78,
-        "",
+        "XZORT RESCUE DRAGON-LIZARD — 35cm / 12 DOF",
+        "=" * 78, "",
+        "GENERATED CAD",
+        "  Physical output: grouped STL modules",
+        "  Reference output: one full-assembly STEP",
+        "  No per-scale STL/STEP explosion", "",
         "SIZE LOCK",
         f"  Hard maximum: {COMPETITION_MAX_MM:.1f} mm",
         f"  Safety target: {TARGET_MAX_MM:.1f} mm",
-        f"  Uniform scale factor: {factor:.8f}",
-        "",
+        f"  Uniform scale factor: {factor:.8f}", "",
         "ASSEMBLY BOUNDING BOX",
         f"  Before scale: X={before[0]:.2f} Y={before[1]:.2f} Z={before[2]:.2f} mm",
         f"  After scale : X={after[0]:.2f} Y={after[1]:.2f} Z={after[2]:.2f} mm",
-        f"  Maximum after scale: {max(after):.2f} mm",
-        "",
+        f"  Maximum after scale: {max(after):.2f} mm", "",
         "DESIGN LOCKS",
-        "  Dragon-beast body is the primary visual form",
-        "  Round/swollen mythical-beast belly",
-        "  Large dragon head / wide face / short muzzle",
-        "  Camera eyes integrated into dragon eye sockets",
+        "  Dragon-lizard visual shell over a quadruped mechanism",
         "  4 legs x 3 DOF = 12 servo positions",
-        "  Articulated tapered dragon tail",
-        "  Layered surface-following scales",
-        "  Real electronics bay + removable tray",
-        "  Top display mount integrated into back",
-        "  NO WINGS / NO CANARDS / NO FIN-WINGS",
-        "",
-        "SAFETY DESIGN NOTE",
-        "  Head front mount is a non-functional sensor/tool bay.",
-        "  No weapon mechanism is included in this CAD.",
-        "",
-        "FILES",
-        "  PRINT_* = intended physical modules",
-        "  REF_full_assembly.* = reference assembly",
-        "",
-        "MODULES:",
+        "  Round external joint shields",
+        "  Layered dragon scales grouped into body/head/tail modules",
+        "  Dragon head with integrated camera-eye housings",
+        "  Electronics bay + removable tray",
+        "  Top display mount",
+        "  Articulated tapered tail",
+        "  NO WINGS / NO CANARDS / NO FIN-WINGS", "",
+        "PRINT MODULES",
     ]
-    for name, _ in parts:
-        lines.append(f"  PRINT_{name}.stl / PRINT_{name}.step")
+    for name in groups:
+        lines.append(f"  PRINT/{name}.stl")
     lines += [
-        "",
-        "REFERENCE:",
-        "  REF_full_assembly.stl / REF_full_assembly.step",
-        "",
-        "IMPORTANT:",
-        "  Verify actual servo, battery, PCB, camera and screen dimensions",
-        "  before manufacturing. The 35cm size lock is enforced by CAD.",
+        "", "REFERENCE", "  REF/full_assembly.step", "",
+        "RAW LOGICAL PART COUNT", f"  {len(parts)} generated solids/components",
+        f"  {len(groups)} printable STL groups", "",
+        "IMPORTANT",
+        "  Verify real servo, battery, PCB, camera and display dimensions",
+        "  before manufacturing.",
     ]
     (OUT / "PRINT_MANIFEST.txt").write_text("\n".join(lines), encoding="utf-8")
 
 
 def main():
     print("=" * 78)
-    print("XZORT RESCUE DRAGON-SPIDER — 35cm / 12 DOF")
-    print("COMPETITION SAFE BUILD / UNIFORM ASSEMBLY SCALE")
+    print("XZORT RESCUE DRAGON-LIZARD — 35cm / 12 DOF")
+    print("GROUPED STL BUILD / ONE REFERENCE STEP")
     print("=" * 78)
 
     parts = all_components()
-    print(f"[INFO] Raw modules: {len(parts)}")
+    print(f"[INFO] Logical components: {len(parts)}")
     print("[INFO] Measuring module bounds (fast, no boolean fuse)...")
 
     parts, factor, before, after = scale_everything_to_competition(parts)
@@ -583,19 +608,23 @@ def main():
     print(f"[INFO] Raw bounding box: X={before[0]:.2f} Y={before[1]:.2f} Z={before[2]:.2f} mm")
     print(f"[INFO] Uniform scale factor: {factor:.8f}")
     print(f"[INFO] Final bounding box: X={after[0]:.2f} Y={after[1]:.2f} Z={after[2]:.2f} mm")
-    print(f"[INFO] Final maximum dimension: {max(after):.2f} mm")
 
-    for name, shape in parts:
-        export_pair("PRINT", name, shape)
+    groups = grouped_exports(parts)
+    print(f"[INFO] Printable STL groups: {len(groups)}")
+
+    for name, shape in groups.items():
+        export_print_stl(name, shape)
 
     assembly = fuse_all(parts)
-    export_pair("REF", "full_assembly", assembly)
-    manifest(parts, factor, before, after)
+    export_reference_step("full_assembly", assembly)
+    write_manifest(parts, factor, before, after, groups)
 
     print(f"[DONE] Output: {OUT.resolve()}")
-    print("[DONE] PRINT_* = physical modules")
-    print("[DONE] REF_*   = reference only")
+    print("[DONE] PRINT/*.stl = grouped physical modules")
+    print("[DONE] REF/full_assembly.step = reference CAD")
     print("[DONE] 35cm hard size guard: PASS")
+
+
 
 
 if __name__ == "__main__":
