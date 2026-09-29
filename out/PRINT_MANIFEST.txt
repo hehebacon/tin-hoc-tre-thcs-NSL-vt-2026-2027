@@ -1,54 +1,163 @@
-XZORT RESCUE QUADRUPED — CAD OUTPUT MANIFEST
-================================================================
+XZORT RESCUE DRAGON-SPIDER — 35cm COMPETITION PRINT MANIFEST
+==============================================================================
 
-PRINT_*  = PRINT THIS PART
-REF_*    = REFERENCE ONLY — DO NOT PRINT
+SIZE LOCK
+  Hard maximum: 350.0 mm
+  Safety target: 345.0 mm
+  Uniform scale factor: 0.31182513
 
-PRINTED MODULES:
+ASSEMBLY BOUNDING BOX
+  Before scale: X=1106.39 Y=309.00 Z=426.79 mm
+  After scale : X=345.00 Y=96.35 Z=133.08 mm
+  Maximum after scale: 345.00 mm
+
+DESIGN LOCKS
+  Dragon-beast body is the primary visual form
+  Round/swollen mythical-beast belly
+  Large dragon head / wide face / short muzzle
+  Camera eyes integrated into dragon eye sockets
+  4 legs x 3 DOF = 12 servo positions
+  Articulated tapered dragon tail
+  Layered surface-following scales
+  Real electronics bay + removable tray
+  Top display mount integrated into back
+  NO WINGS / NO CANARDS / NO FIN-WINGS
+
+SAFETY DESIGN NOTE
+  Head front mount is a non-functional sensor/tool bay.
+  No weapon mechanism is included in this CAD.
+
+FILES
+  PRINT_* = intended physical modules
+  REF_full_assembly.* = reference assembly
+
+MODULES:
   PRINT_body_shell.stl / PRINT_body_shell.step
-  PRINT_body_bottom_guard.stl / PRINT_body_bottom_guard.step
+  PRINT_body_lower_cover.stl / PRINT_body_lower_cover.step
   PRINT_electronics_tray.stl / PRINT_electronics_tray.step
-  PRINT_display_bezel.stl / PRINT_display_bezel.step
-  PRINT_display_mount_plate.stl / PRINT_display_mount_plate.step
-  PRINT_display_cable_tunnel.stl / PRINT_display_cable_tunnel.step
-  PRINT_body_scale_00.stl / PRINT_body_scale_00.step
-  PRINT_body_scale_01.stl / PRINT_body_scale_01.step
-  PRINT_body_scale_02.stl / PRINT_body_scale_02.step
-  PRINT_body_scale_03.stl / PRINT_body_scale_03.step
-  PRINT_body_scale_04.stl / PRINT_body_scale_04.step
-  PRINT_body_scale_05.stl / PRINT_body_scale_05.step
-  PRINT_body_scale_06.stl / PRINT_body_scale_06.step
-  PRINT_body_scale_07.stl / PRINT_body_scale_07.step
-  PRINT_body_scale_08.stl / PRINT_body_scale_08.step
-  PRINT_body_scale_09.stl / PRINT_body_scale_09.step
-  PRINT_body_scale_10.stl / PRINT_body_scale_10.step
-  PRINT_body_scale_11.stl / PRINT_body_scale_11.step
-  PRINT_body_scale_12.stl / PRINT_body_scale_12.step
-  PRINT_body_scale_13.stl / PRINT_body_scale_13.step
-  PRINT_body_scale_14.stl / PRINT_body_scale_14.step
-  PRINT_body_scale_15.stl / PRINT_body_scale_15.step
-  PRINT_body_scale_16.stl / PRINT_body_scale_16.step
-  PRINT_body_scale_17.stl / PRINT_body_scale_17.step
-  PRINT_body_scale_18.stl / PRINT_body_scale_18.step
-  PRINT_body_scale_19.stl / PRINT_body_scale_19.step
-  PRINT_body_scale_20.stl / PRINT_body_scale_20.step
-  PRINT_body_scale_21.stl / PRINT_body_scale_21.step
-  PRINT_body_scale_22.stl / PRINT_body_scale_22.step
-  PRINT_body_scale_23.stl / PRINT_body_scale_23.step
-  PRINT_body_scale_24.stl / PRINT_body_scale_24.step
-  PRINT_body_scale_25.stl / PRINT_body_scale_25.step
-  PRINT_body_scale_26.stl / PRINT_body_scale_26.step
-  PRINT_body_scale_27.stl / PRINT_body_scale_27.step
-  PRINT_body_scale_28.stl / PRINT_body_scale_28.step
-  PRINT_body_scale_29.stl / PRINT_body_scale_29.step
-  PRINT_body_scale_30.stl / PRINT_body_scale_30.step
-  PRINT_body_scale_31.stl / PRINT_body_scale_31.step
-  PRINT_body_scale_32.stl / PRINT_body_scale_32.step
-  PRINT_dorsal_spines.stl / PRINT_dorsal_spines.step
+  PRINT_electronics_rail.stl / PRINT_electronics_rail.step
+  PRINT_screen_mount.stl / PRINT_screen_mount.step
+  PRINT_screen_rear_guard.stl / PRINT_screen_rear_guard.step
   PRINT_dragon_head.stl / PRINT_dragon_head.step
-  PRINT_neck_armor.stl / PRINT_neck_armor.step
-  PRINT_dragon_fin_left.stl / PRINT_dragon_fin_left.step
-  PRINT_dragon_fin_right.stl / PRINT_dragon_fin_right.step
+  PRINT_head_sensor_mount.stl / PRINT_head_sensor_mount.step
+  PRINT_body_dorsal_scale_000.stl / PRINT_body_dorsal_scale_000.step
+  PRINT_body_dorsal_scale_001.stl / PRINT_body_dorsal_scale_001.step
+  PRINT_body_dorsal_scale_002.stl / PRINT_body_dorsal_scale_002.step
+  PRINT_body_dorsal_scale_003.stl / PRINT_body_dorsal_scale_003.step
+  PRINT_body_dorsal_scale_004.stl / PRINT_body_dorsal_scale_004.step
+  PRINT_body_dorsal_scale_005.stl / PRINT_body_dorsal_scale_005.step
+  PRINT_body_dorsal_scale_006.stl / PRINT_body_dorsal_scale_006.step
+  PRINT_body_dorsal_scale_007.stl / PRINT_body_dorsal_scale_007.step
+  PRINT_body_dorsal_scale_008.stl / PRINT_body_dorsal_scale_008.step
+  PRINT_body_dorsal_scale_009.stl / PRINT_body_dorsal_scale_009.step
+  PRINT_body_dorsal_scale_010.stl / PRINT_body_dorsal_scale_010.step
+  PRINT_body_side_scale_011.stl / PRINT_body_side_scale_011.step
+  PRINT_body_side_scale_012.stl / PRINT_body_side_scale_012.step
+  PRINT_body_side_scale_013.stl / PRINT_body_side_scale_013.step
+  PRINT_body_side_scale_014.stl / PRINT_body_side_scale_014.step
+  PRINT_body_side_scale_015.stl / PRINT_body_side_scale_015.step
+  PRINT_body_side_scale_016.stl / PRINT_body_side_scale_016.step
+  PRINT_body_side_scale_017.stl / PRINT_body_side_scale_017.step
+  PRINT_body_side_scale_018.stl / PRINT_body_side_scale_018.step
+  PRINT_body_side_scale_019.stl / PRINT_body_side_scale_019.step
+  PRINT_body_side_scale_020.stl / PRINT_body_side_scale_020.step
+  PRINT_body_side_scale_021.stl / PRINT_body_side_scale_021.step
+  PRINT_body_side_scale_022.stl / PRINT_body_side_scale_022.step
+  PRINT_body_side_scale_023.stl / PRINT_body_side_scale_023.step
+  PRINT_body_side_scale_024.stl / PRINT_body_side_scale_024.step
+  PRINT_body_side_scale_025.stl / PRINT_body_side_scale_025.step
+  PRINT_body_side_scale_026.stl / PRINT_body_side_scale_026.step
+  PRINT_body_side_scale_027.stl / PRINT_body_side_scale_027.step
+  PRINT_body_side_scale_028.stl / PRINT_body_side_scale_028.step
+  PRINT_body_side_scale_029.stl / PRINT_body_side_scale_029.step
+  PRINT_body_side_scale_030.stl / PRINT_body_side_scale_030.step
+  PRINT_body_side_scale_031.stl / PRINT_body_side_scale_031.step
+  PRINT_body_side_scale_032.stl / PRINT_body_side_scale_032.step
+  PRINT_body_side_scale_033.stl / PRINT_body_side_scale_033.step
+  PRINT_body_side_scale_034.stl / PRINT_body_side_scale_034.step
+  PRINT_body_side_scale_035.stl / PRINT_body_side_scale_035.step
+  PRINT_body_side_scale_036.stl / PRINT_body_side_scale_036.step
+  PRINT_body_side_scale_037.stl / PRINT_body_side_scale_037.step
+  PRINT_body_side_scale_038.stl / PRINT_body_side_scale_038.step
+  PRINT_body_side_scale_039.stl / PRINT_body_side_scale_039.step
+  PRINT_body_side_scale_040.stl / PRINT_body_side_scale_040.step
+  PRINT_body_side_scale_041.stl / PRINT_body_side_scale_041.step
+  PRINT_body_side_scale_042.stl / PRINT_body_side_scale_042.step
+  PRINT_body_side_scale_043.stl / PRINT_body_side_scale_043.step
+  PRINT_body_side_scale_044.stl / PRINT_body_side_scale_044.step
+  PRINT_body_side_scale_045.stl / PRINT_body_side_scale_045.step
+  PRINT_body_side_scale_046.stl / PRINT_body_side_scale_046.step
+  PRINT_body_side_scale_047.stl / PRINT_body_side_scale_047.step
+  PRINT_body_side_scale_048.stl / PRINT_body_side_scale_048.step
+  PRINT_body_side_scale_049.stl / PRINT_body_side_scale_049.step
+  PRINT_body_side_scale_050.stl / PRINT_body_side_scale_050.step
+  PRINT_body_side_scale_051.stl / PRINT_body_side_scale_051.step
+  PRINT_body_side_scale_052.stl / PRINT_body_side_scale_052.step
+  PRINT_body_side_scale_053.stl / PRINT_body_side_scale_053.step
+  PRINT_body_side_scale_054.stl / PRINT_body_side_scale_054.step
+  PRINT_body_side_scale_055.stl / PRINT_body_side_scale_055.step
+  PRINT_body_side_scale_056.stl / PRINT_body_side_scale_056.step
+  PRINT_body_side_scale_057.stl / PRINT_body_side_scale_057.step
+  PRINT_body_side_scale_058.stl / PRINT_body_side_scale_058.step
+  PRINT_body_side_scale_059.stl / PRINT_body_side_scale_059.step
+  PRINT_body_side_scale_060.stl / PRINT_body_side_scale_060.step
+  PRINT_body_side_scale_061.stl / PRINT_body_side_scale_061.step
+  PRINT_body_side_scale_062.stl / PRINT_body_side_scale_062.step
+  PRINT_body_side_scale_063.stl / PRINT_body_side_scale_063.step
+  PRINT_body_side_scale_064.stl / PRINT_body_side_scale_064.step
+  PRINT_body_side_scale_065.stl / PRINT_body_side_scale_065.step
+  PRINT_body_side_scale_066.stl / PRINT_body_side_scale_066.step
+  PRINT_body_side_scale_067.stl / PRINT_body_side_scale_067.step
+  PRINT_body_side_scale_068.stl / PRINT_body_side_scale_068.step
+  PRINT_body_side_scale_069.stl / PRINT_body_side_scale_069.step
+  PRINT_body_side_scale_070.stl / PRINT_body_side_scale_070.step
+  PRINT_body_side_scale_071.stl / PRINT_body_side_scale_071.step
+  PRINT_body_side_scale_072.stl / PRINT_body_side_scale_072.step
+  PRINT_body_side_scale_073.stl / PRINT_body_side_scale_073.step
+  PRINT_body_side_scale_074.stl / PRINT_body_side_scale_074.step
+  PRINT_body_side_scale_075.stl / PRINT_body_side_scale_075.step
+  PRINT_body_side_scale_076.stl / PRINT_body_side_scale_076.step
+  PRINT_body_side_scale_077.stl / PRINT_body_side_scale_077.step
+  PRINT_body_side_scale_078.stl / PRINT_body_side_scale_078.step
+  PRINT_body_side_scale_079.stl / PRINT_body_side_scale_079.step
+  PRINT_body_side_scale_080.stl / PRINT_body_side_scale_080.step
+  PRINT_body_side_scale_081.stl / PRINT_body_side_scale_081.step
+  PRINT_body_side_scale_082.stl / PRINT_body_side_scale_082.step
+  PRINT_body_side_scale_083.stl / PRINT_body_side_scale_083.step
+  PRINT_body_side_scale_084.stl / PRINT_body_side_scale_084.step
+  PRINT_body_side_scale_085.stl / PRINT_body_side_scale_085.step
+  PRINT_body_side_scale_086.stl / PRINT_body_side_scale_086.step
+  PRINT_body_side_scale_087.stl / PRINT_body_side_scale_087.step
+  PRINT_body_side_scale_088.stl / PRINT_body_side_scale_088.step
+  PRINT_body_side_scale_089.stl / PRINT_body_side_scale_089.step
+  PRINT_body_side_scale_090.stl / PRINT_body_side_scale_090.step
+  PRINT_body_rear_scale_091.stl / PRINT_body_rear_scale_091.step
+  PRINT_body_rear_scale_092.stl / PRINT_body_rear_scale_092.step
+  PRINT_body_rear_scale_093.stl / PRINT_body_rear_scale_093.step
+  PRINT_body_rear_scale_094.stl / PRINT_body_rear_scale_094.step
+  PRINT_body_rear_scale_095.stl / PRINT_body_rear_scale_095.step
+  PRINT_body_rear_scale_096.stl / PRINT_body_rear_scale_096.step
+  PRINT_body_rear_scale_097.stl / PRINT_body_rear_scale_097.step
+  PRINT_body_rear_scale_098.stl / PRINT_body_rear_scale_098.step
+  PRINT_body_rear_scale_099.stl / PRINT_body_rear_scale_099.step
+  PRINT_body_rear_scale_100.stl / PRINT_body_rear_scale_100.step
+  PRINT_body_rear_scale_101.stl / PRINT_body_rear_scale_101.step
+  PRINT_body_rear_scale_102.stl / PRINT_body_rear_scale_102.step
+  PRINT_body_rear_scale_103.stl / PRINT_body_rear_scale_103.step
+  PRINT_body_rear_scale_104.stl / PRINT_body_rear_scale_104.step
+  PRINT_body_rear_scale_105.stl / PRINT_body_rear_scale_105.step
+  PRINT_body_rear_scale_106.stl / PRINT_body_rear_scale_106.step
+  PRINT_neck_ring_01.stl / PRINT_neck_ring_01.step
+  PRINT_neck_ring_02.stl / PRINT_neck_ring_02.step
+  PRINT_neck_ring_03.stl / PRINT_neck_ring_03.step
+  PRINT_electronics_standoff_01.stl / PRINT_electronics_standoff_01.step
+  PRINT_electronics_standoff_02.stl / PRINT_electronics_standoff_02.step
+  PRINT_electronics_standoff_03.stl / PRINT_electronics_standoff_03.step
+  PRINT_electronics_standoff_04.stl / PRINT_electronics_standoff_04.step
+  PRINT_electronics_standoff_05.stl / PRINT_electronics_standoff_05.step
+  PRINT_electronics_standoff_06.stl / PRINT_electronics_standoff_06.step
+  PRINT_electronics_standoff_07.stl / PRINT_electronics_standoff_07.step
+  PRINT_electronics_standoff_08.stl / PRINT_electronics_standoff_08.step
   PRINT_tail_segment_01.stl / PRINT_tail_segment_01.step
   PRINT_tail_segment_02.stl / PRINT_tail_segment_02.step
   PRINT_tail_segment_03.stl / PRINT_tail_segment_03.step
@@ -58,53 +167,41 @@ PRINTED MODULES:
   PRINT_tail_segment_07.stl / PRINT_tail_segment_07.step
   PRINT_tail_segment_08.stl / PRINT_tail_segment_08.step
   PRINT_tail_segment_09.stl / PRINT_tail_segment_09.step
-  PRINT_FL_coxa.stl / PRINT_FL_coxa.step
-  PRINT_FL_coxa_armor.stl / PRINT_FL_coxa_armor.step
-  PRINT_FL_femur.stl / PRINT_FL_femur.step
-  PRINT_FL_femur_armor.stl / PRINT_FL_femur_armor.step
-  PRINT_FL_tibia.stl / PRINT_FL_tibia.step
-  PRINT_FL_tibia_armor.stl / PRINT_FL_tibia_armor.step
-  PRINT_FL_foot.stl / PRINT_FL_foot.step
-  PRINT_FR_coxa.stl / PRINT_FR_coxa.step
-  PRINT_FR_coxa_armor.stl / PRINT_FR_coxa_armor.step
-  PRINT_FR_femur.stl / PRINT_FR_femur.step
-  PRINT_FR_femur_armor.stl / PRINT_FR_femur_armor.step
-  PRINT_FR_tibia.stl / PRINT_FR_tibia.step
-  PRINT_FR_tibia_armor.stl / PRINT_FR_tibia_armor.step
-  PRINT_FR_foot.stl / PRINT_FR_foot.step
-  PRINT_RL_coxa.stl / PRINT_RL_coxa.step
-  PRINT_RL_coxa_armor.stl / PRINT_RL_coxa_armor.step
-  PRINT_RL_femur.stl / PRINT_RL_femur.step
-  PRINT_RL_femur_armor.stl / PRINT_RL_femur_armor.step
-  PRINT_RL_tibia.stl / PRINT_RL_tibia.step
-  PRINT_RL_tibia_armor.stl / PRINT_RL_tibia_armor.step
-  PRINT_RL_foot.stl / PRINT_RL_foot.step
-  PRINT_RR_coxa.stl / PRINT_RR_coxa.step
-  PRINT_RR_coxa_armor.stl / PRINT_RR_coxa_armor.step
-  PRINT_RR_femur.stl / PRINT_RR_femur.step
-  PRINT_RR_femur_armor.stl / PRINT_RR_femur_armor.step
-  PRINT_RR_tibia.stl / PRINT_RR_tibia.step
-  PRINT_RR_tibia_armor.stl / PRINT_RR_tibia_armor.step
-  PRINT_RR_foot.stl / PRINT_RR_foot.step
-  PRINT_body_standoff_00.stl / PRINT_body_standoff_00.step
-  PRINT_body_standoff_01.stl / PRINT_body_standoff_01.step
-  PRINT_body_standoff_02.stl / PRINT_body_standoff_02.step
-  PRINT_body_standoff_03.stl / PRINT_body_standoff_03.step
-  PRINT_body_standoff_04.stl / PRINT_body_standoff_04.step
-  PRINT_body_standoff_05.stl / PRINT_body_standoff_05.step
+  PRINT_tail_segment_10.stl / PRINT_tail_segment_10.step
+  PRINT_tail_segment_11.stl / PRINT_tail_segment_11.step
+  PRINT_tail_segment_12.stl / PRINT_tail_segment_12.step
+  PRINT_FL_SERVO_3.stl / PRINT_FL_SERVO_3.step
+  PRINT_FL_SEGMENT_3.stl / PRINT_FL_SEGMENT_3.step
+  PRINT_FL_SERVO_2.stl / PRINT_FL_SERVO_2.step
+  PRINT_FL_SEGMENT_2.stl / PRINT_FL_SEGMENT_2.step
+  PRINT_FL_SERVO_1.stl / PRINT_FL_SERVO_1.step
+  PRINT_FL_SEGMENT_1_SHIELD.stl / PRINT_FL_SEGMENT_1_SHIELD.step
+  PRINT_FL_FOOT.stl / PRINT_FL_FOOT.step
+  PRINT_FR_SERVO_3.stl / PRINT_FR_SERVO_3.step
+  PRINT_FR_SEGMENT_3.stl / PRINT_FR_SEGMENT_3.step
+  PRINT_FR_SERVO_2.stl / PRINT_FR_SERVO_2.step
+  PRINT_FR_SEGMENT_2.stl / PRINT_FR_SEGMENT_2.step
+  PRINT_FR_SERVO_1.stl / PRINT_FR_SERVO_1.step
+  PRINT_FR_SEGMENT_1_SHIELD.stl / PRINT_FR_SEGMENT_1_SHIELD.step
+  PRINT_FR_FOOT.stl / PRINT_FR_FOOT.step
+  PRINT_RL_SERVO_3.stl / PRINT_RL_SERVO_3.step
+  PRINT_RL_SEGMENT_3.stl / PRINT_RL_SEGMENT_3.step
+  PRINT_RL_SERVO_2.stl / PRINT_RL_SERVO_2.step
+  PRINT_RL_SEGMENT_2.stl / PRINT_RL_SEGMENT_2.step
+  PRINT_RL_SERVO_1.stl / PRINT_RL_SERVO_1.step
+  PRINT_RL_SEGMENT_1_SHIELD.stl / PRINT_RL_SEGMENT_1_SHIELD.step
+  PRINT_RL_FOOT.stl / PRINT_RL_FOOT.step
+  PRINT_RR_SERVO_3.stl / PRINT_RR_SERVO_3.step
+  PRINT_RR_SEGMENT_3.stl / PRINT_RR_SEGMENT_3.step
+  PRINT_RR_SERVO_2.stl / PRINT_RR_SERVO_2.step
+  PRINT_RR_SEGMENT_2.stl / PRINT_RR_SEGMENT_2.step
+  PRINT_RR_SERVO_1.stl / PRINT_RR_SERVO_1.step
+  PRINT_RR_SEGMENT_1_SHIELD.stl / PRINT_RR_SEGMENT_1_SHIELD.step
+  PRINT_RR_FOOT.stl / PRINT_RR_FOOT.step
 
 REFERENCE:
   REF_full_assembly.stl / REF_full_assembly.step
-  REF_full_assembly is a visual assembly preview only.
-
-BODY:
-  Large rounded hollow shell.
-  Internal electronics bay is intentionally spacious.
-  Top display bay accepts a generic screen/module.
-  Electronics tray is removable.
 
 IMPORTANT:
-  STL = normally used for slicing/printing.
-  STEP = CAD/editing/reference format.
-  REF files are not intended to be printed.
-  Check real servo/screen dimensions before final fabrication.
+  Verify actual servo, battery, PCB, camera and screen dimensions
+  before manufacturing. The 35cm size lock is enforced by CAD.
