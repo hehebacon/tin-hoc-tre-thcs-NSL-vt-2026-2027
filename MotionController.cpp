@@ -1,15 +1,16 @@
 #include "MotionController.h"
 #include "EnvironmentalSensors.h"
 #include "ImuInterface.h"
+#include "RobotConfig.h"
 
 static EnvironmentalSensors environment;
 static ImuInterface imu;
 
 const uint8_t MotionController::SERVO_MAP[LEG_COUNT][3] = {
-    {0, 1, 2},
-    {3, 4, 5},
-    {6, 7, 8},
-    {9, 10, 11}
+    {RobotConfig::SERVO_FL_COXA, RobotConfig::SERVO_FL_FEMUR, RobotConfig::SERVO_FL_TIBIA},
+    {RobotConfig::SERVO_FR_COXA, RobotConfig::SERVO_FR_FEMUR, RobotConfig::SERVO_FR_TIBIA},
+    {RobotConfig::SERVO_RL_COXA, RobotConfig::SERVO_RL_FEMUR, RobotConfig::SERVO_RL_TIBIA},
+    {RobotConfig::SERVO_RR_COXA, RobotConfig::SERVO_RR_FEMUR, RobotConfig::SERVO_RR_TIBIA}
 };
 
 const char* const MotionController::LEG_NAMES[LEG_COUNT] = {
@@ -37,6 +38,7 @@ void MotionController::begin()
     jumpActive = false;
 
     Serial.println("[MOTION] Controller initialized");
+    Serial.println("[MOTION] 35cm configuration loaded");
     Serial.println("[MOTION] Hardware adapter initialized");
 }
 
@@ -167,10 +169,12 @@ bool MotionController::validateFootTarget(
 {
     const float radial = sqrtf(x * x + y * y);
 
-    if (radial < 35.0f || radial > 180.0f)
+    if (radial < RobotConfig::FOOT_MIN_RADIUS_MM ||
+        radial > RobotConfig::FOOT_MAX_RADIUS_MM)
         return false;
 
-    if (z > -45.0f || z < -150.0f)
+    if (z > RobotConfig::FOOT_MAX_Z_MM ||
+        z < RobotConfig::FOOT_MIN_Z_MM)
         return false;
 
     return true;
@@ -225,299 +229,8 @@ bool MotionController::setFootTarget(
 
     return setFootTarget(
         static_cast<LegID>(leg),
-        x, y, z
+        x,
+        y,
+        z
     );
-}
-
-bool MotionController::setLegIK(
-    LegID leg,
-    float x,
-    float y,
-    float z
-)
-{
-    return setFootTarget(leg, x, y, z);
-}
-
-bool MotionController::setLegIK(
-    const String& name,
-    float x,
-    float y,
-    float z
-)
-{
-    return setFootTarget(name, x, y, z);
-}
-
-void MotionController::testIK(float x, float y, float z) const
-{
-    JointAngles result;
-
-    Serial.println();
-    Serial.println("=============== IK RESULT ===============");
-    Serial.printf("Input X : %.2f mm\n", x);
-    Serial.printf("Input Y : %.2f mm\n", y);
-    Serial.printf("Input Z : %.2f mm\n", z);
-
-    if (solveIK(x, y, z, result)) {
-        Serial.printf("Coxa    : %.2f deg\n", result.coxa);
-        Serial.printf("Femur   : %.2f deg\n", result.femur);
-        Serial.printf("Tibia   : %.2f deg\n", result.tibia);
-        Serial.println("Status  : VALID");
-    } else {
-        Serial.println("Status  : UNREACHABLE");
-    }
-
-    Serial.println("==========================================");
-    Serial.println();
-}
-
-void MotionController::jump()
-{
-    if (jumpActive) {
-        Serial.println("[JUMP] Already active");
-        return;
-    }
-
-    gaitController.stop();
-    jumpActive = true;
-    jumpPhase = JumpPhase::CROUCH;
-    jumpPhaseStartedMs = millis();
-
-    Serial.println("[JUMP] START");
-    applyJumpPose(-90.0f);
-}
-
-bool MotionController::jumping() const
-{
-    return jumpActive;
-}
-
-void MotionController::applyJumpPose(float z)
-{
-    for (int i = 0; i < LEG_COUNT; ++i) {
-        const float y = (i == FL || i == RL) ? 45.0f : -45.0f;
-        if (!setFootTarget(static_cast<LegID>(i), 0.0f, y, z)) {
-            Serial.printf("[JUMP] IK REJECT %s Z=%.1f\n", LEG_NAMES[i], z);
-            finishJump();
-            return;
-        }
-    }
-}
-
-float MotionController::jumpPhaseProgress(
-    unsigned long elapsed,
-    unsigned long duration
-) const
-{
-    if (duration == 0)
-        return 1.0f;
-
-    float p = static_cast<float>(elapsed) / static_cast<float>(duration);
-
-    if (p < 0.0f) return 0.0f;
-    if (p > 1.0f) return 1.0f;
-
-    // Smoothstep keeps the transition softer than a hard position jump.
-    return p * p * (3.0f - 2.0f * p);
-}
-
-void MotionController::updateJump()
-{
-    const unsigned long elapsed = millis() - jumpPhaseStartedMs;
-
-    unsigned long duration = 0;
-    float fromZ = -90.0f;
-    float toZ = -90.0f;
-    JumpPhase next = jumpPhase;
-
-    switch (jumpPhase) {
-        case JumpPhase::CROUCH:
-            duration = 220; fromZ = -90.0f; toZ = -106.0f; next = JumpPhase::LOAD;
-            break;
-        case JumpPhase::LOAD:
-            duration = 160; fromZ = -106.0f; toZ = -112.0f; next = JumpPhase::PUSH;
-            break;
-        case JumpPhase::PUSH:
-            duration = 140; fromZ = -112.0f; toZ = -62.0f; next = JumpPhase::FLIGHT;
-            break;
-        case JumpPhase::FLIGHT:
-            duration = 280; fromZ = -62.0f; toZ = -68.0f; next = JumpPhase::TUCK;
-            break;
-        case JumpPhase::TUCK:
-            duration = 120; fromZ = -68.0f; toZ = -76.0f; next = JumpPhase::LAND;
-            break;
-        case JumpPhase::LAND:
-            duration = 120; fromZ = -76.0f; toZ = -90.0f; next = JumpPhase::ABSORB;
-            break;
-        case JumpPhase::ABSORB:
-            duration = 180; fromZ = -90.0f; toZ = -100.0f; next = JumpPhase::RECOVER;
-            break;
-        case JumpPhase::RECOVER:
-            duration = 220; fromZ = -100.0f; toZ = -90.0f; next = JumpPhase::IDLE;
-            break;
-        case JumpPhase::IDLE:
-        default:
-            finishJump();
-            return;
-    }
-
-    const float p = jumpPhaseProgress(elapsed, duration);
-    const float z = fromZ + (toZ - fromZ) * p;
-    applyJumpPose(z);
-
-    if (elapsed >= duration) {
-        jumpPhase = next;
-        jumpPhaseStartedMs = millis();
-
-        if (jumpPhase == JumpPhase::IDLE) {
-            finishJump();
-            return;
-        }
-
-        Serial.printf("[JUMP] PHASE -> %d\n", static_cast<int>(jumpPhase));
-    }
-}
-
-void MotionController::finishJump()
-{
-    jumpActive = false;
-    jumpPhase = JumpPhase::IDLE;
-    jumpPhaseStartedMs = 0;
-    stand();
-    Serial.println("[JUMP] COMPLETE");
-}
-
-void MotionController::setGait(const String& mode)
-{
-    gaitController.setMode(mode);
-    Serial.printf("[GAIT] Mode -> %s\n", gaitController.mode());
-}
-
-void MotionController::stopGait()
-{
-    gaitController.stop();
-    Serial.println("[GAIT] Stopped");
-}
-
-const GaitController& MotionController::gait() const
-{
-    return gaitController;
-}
-
-void MotionController::center()
-{
-    stopGait();
-    servoManager.centerAll();
-    resetLegStates();
-    Serial.println("[MOTION] Neutral pose applied");
-}
-
-void MotionController::stand()
-{
-    stopGait();
-
-    for (int i = 0; i < LEG_COUNT; ++i)
-        setLeg(static_cast<LegID>(i), 90, 90, 90);
-
-    Serial.println("[MOTION] Stand pose applied");
-}
-
-void MotionController::enable()
-{
-    servoManager.enableAll();
-}
-
-void MotionController::disable()
-{
-    stopGait();
-    servoManager.disableAll();
-}
-
-void MotionController::status() const
-{
-    Serial.println();
-    Serial.println("============== ROBOT STATUS ==============");
-    Serial.printf("Robot    : %s\n", ROBOT_NAME);
-    Serial.printf("Firmware : %s\n", FIRMWARE_VERSION);
-    Serial.printf("Gait     : %s\n", gaitController.mode());
-    Serial.printf("Phase    : %.3f\n", gaitController.phase());
-    Serial.printf("Moving   : %s\n", gaitController.moving() ? "YES" : "NO");
-    Serial.println();
-
-    for (int i = 0; i < LEG_COUNT; ++i) {
-        Serial.printf(
-            "%s | C:%6.2f F:%6.2f T:%6.2f\n",
-            LEG_NAMES[i],
-            legs[i].coxa,
-            legs[i].femur,
-            legs[i].tibia
-        );
-    }
-
-    Serial.println("==========================================");
-    servoManager.status();
-}
-
-void MotionController::debug() const
-{
-    Serial.println();
-    Serial.println("========== MODULE DEBUG ==========");
-    Serial.printf("[OK] config.h              | Robot=%s\n", ROBOT_NAME);
-    Serial.printf("[OK] ServoManager          | channels=%d\n", SERVO_COUNT);
-    Serial.println("[OK] ServoCalibration");
-    Serial.println("[OK] Kinematics");
-    Serial.println("[OK] GaitController");
-    Serial.println("[OK] MotionController");
-    Serial.println("[OK] Main firmware");
-    Serial.println();
-    Serial.println("[INFO] Hardware:");
-    Serial.println("       PCA9685 : guarded hardware adapter");
-    Serial.println("       Servos  : OFFLINE");
-    Serial.println("       Camera  : OFFLINE");
-    Serial.println("       Voice   : OFFLINE");
-    Serial.println("==================================");
-    Serial.println();
-}
-
-void MotionController::printCalibration() const
-{
-    calibrator.printAll();
-}
-
-void MotionController::printCalibration(int channel) const
-{
-    calibrator.print(channel);
-}
-
-void MotionController::setCalibrationOffset(int channel, int offset)
-{
-    calibrator.setOffset(channel, offset);
-    calibrator.print(channel);
-}
-
-void MotionController::setCalibrationInvert(int channel, bool invert)
-{
-    calibrator.setInvert(channel, invert);
-    calibrator.print(channel);
-}
-
-void MotionController::setCalibrationLimits(
-    int channel,
-    int minimum,
-    int maximum
-)
-{
-    calibrator.setLimits(channel, minimum, maximum);
-    calibrator.print(channel);
-}
-
-const LegState& MotionController::getLegState(LegID leg) const
-{
-    static const LegState invalid = {0.0f, 0.0f, 0.0f};
-
-    if (leg < 0 || leg >= LEG_COUNT)
-        return invalid;
-
-    return legs[leg];
 }
