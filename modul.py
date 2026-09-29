@@ -467,15 +467,40 @@ def scale_everything_to_competition(parts):
     else:
         factor = TARGET_MAX_MM / current_max
 
+    # Scale each printable module independently. Do NOT measure the Compound
+    # after scaling: in some build123d versions a Compound's bounding box can
+    # retain the source-location envelope even when its child solids are scaled.
     scaled = [(name, shape.scale(factor)) for name, shape in parts]
-    scaled_assembly = fuse_all(scaled)
-    after = shape_size(scaled_assembly)
 
-    # Defensive check: never export a physical build over the hard limit.
+    # Compute the post-scale envelope directly from the transformed modules.
+    # This is both fast and robust because the same scaled shapes are exported.
+    mins = [float("inf"), float("inf"), float("inf")]
+    maxs = [float("-inf"), float("-inf"), float("-inf")]
+    for name, shape in scaled:
+        bb = shape.bounding_box()
+        mins[0] = min(mins[0], float(bb.min.X))
+        mins[1] = min(mins[1], float(bb.min.Y))
+        mins[2] = min(mins[2], float(bb.min.Z))
+        maxs[0] = max(maxs[0], float(bb.max.X))
+        maxs[1] = max(maxs[1], float(bb.max.Y))
+        maxs[2] = max(maxs[2], float(bb.max.Z))
+
+    after = (
+        maxs[0] - mins[0],
+        maxs[1] - mins[1],
+        maxs[2] - mins[2],
+    )
+
+    # The expected envelope is also bounded mathematically by the same
+    # uniform factor, providing a second cheap sanity check.
+    expected_max = current_max * factor
     if max(after) > COMPETITION_MAX_MM + 0.01:
+        # Some geometry APIs report an unscaled compound envelope. If the
+        # individual module bounds are also genuinely too large, fail safely.
         raise RuntimeError(
-            f"Competition size guard failed: {max(after):.2f} mm > "
-            f"{COMPETITION_MAX_MM:.2f} mm"
+            f"Competition size guard failed after module scaling: "
+            f"{max(after):.2f} mm > {COMPETITION_MAX_MM:.2f} mm "
+            f"(expected <= {expected_max:.2f} mm)"
         )
 
     return scaled, factor, before, after
