@@ -1,19 +1,23 @@
 #include "MotionController.h"
 #include "EnvironmentalSensors.h"
 #include "ImuInterface.h"
+#include "MotionSet.h"
+#include "SafetyManager.h"
 #include <math.h>
 
 static EnvironmentalSensors environment;
 static ImuInterface imu;
+static MotionSet motionSet;
+static SafetyManager safetyManager;
 
-const uint8_t MotionController::SERVO_MAP[RobotConfig::LEG_COUNT][3] = {
+const uint8_t MotionController::SERVO_MAP[LEG_COUNT][3] = {
     {RobotConfig::SERVO_FL_COXA, RobotConfig::SERVO_FL_FEMUR, RobotConfig::SERVO_FL_TIBIA},
     {RobotConfig::SERVO_FR_COXA, RobotConfig::SERVO_FR_FEMUR, RobotConfig::SERVO_FR_TIBIA},
     {RobotConfig::SERVO_RL_COXA, RobotConfig::SERVO_RL_FEMUR, RobotConfig::SERVO_RL_TIBIA},
     {RobotConfig::SERVO_RR_COXA, RobotConfig::SERVO_RR_FEMUR, RobotConfig::SERVO_RR_TIBIA}
 };
 
-const char* const MotionController::LEG_NAMES[RobotConfig::LEG_COUNT] = {"FL", "FR", "RL", "RR"};
+const char* const MotionController::LEG_NAMES[LEG_COUNT] = {"FL", "FR", "RL", "RR"};
 
 MotionController::MotionController()
     : kinematics(RobotConfig::COXA_MM, RobotConfig::FEMUR_MM, RobotConfig::TIBIA_MM),
@@ -37,7 +41,6 @@ void MotionController::begin() {
 
 void MotionController::update(float dt) {
     motionSet.update(dt);
-
     if (!safetyManager.canMove()) return;
 
     if (jumpActive) {
@@ -48,21 +51,21 @@ void MotionController::update(float dt) {
     if (!gaitController.moving()) return;
     gaitController.update(dt);
 
-    for (uint8_t i = 0; i < RobotConfig::LEG_COUNT; ++i) {
+    for (uint8_t i = 0; i < LEG_COUNT; ++i) {
         const FootTarget target = gaitController.target(static_cast<GaitLeg>(i));
         setFootTarget(static_cast<LegID>(i), target.x, target.y, target.z);
     }
 }
 
 void MotionController::resetLegStates() {
-    for (uint8_t i = 0; i < RobotConfig::LEG_COUNT; ++i) {
+    for (uint8_t i = 0; i < LEG_COUNT; ++i)
         legs[i] = {RobotConfig::DEFAULT_SERVO_DEG, RobotConfig::DEFAULT_SERVO_DEG, RobotConfig::DEFAULT_SERVO_DEG};
-    }
 }
 
 int MotionController::parseLeg(const String& name) const {
     String n = name;
-    n.trim(); n.toUpperCase();
+    n.trim();
+    n.toUpperCase();
     if (n == "FL") return FL;
     if (n == "FR") return FR;
     if (n == "RL") return RL;
@@ -73,14 +76,14 @@ int MotionController::parseLeg(const String& name) const {
 void MotionController::setServo(int channel, int rawAngle) {
     if (!servoManager.validChannel(channel) || !safetyManager.canMove()) return;
     if (!safetyManager.validateServoAngle(rawAngle)) return;
+
     const int calibrated = calibrator.apply(channel, rawAngle);
     if (!safetyManager.validateServoAngle(calibrated)) return;
     servoManager.setAngle(channel, calibrated);
 }
 
 bool MotionController::setLeg(LegID leg, int coxa, int femur, int tibia) {
-    if (leg < FL || leg > RR) return false;
-    if (!safetyManager.canMove()) return false;
+    if (leg < FL || leg > RR || !safetyManager.canMove()) return false;
     if (!safetyManager.validateServoAngle(coxa) ||
         !safetyManager.validateServoAngle(femur) ||
         !safetyManager.validateServoAngle(tibia)) return false;
@@ -138,7 +141,7 @@ void MotionController::testIK(float x, float y, float z) const {
         Serial.printf("[IK] INVALID target %.1f %.1f %.1f\n", x, y, z);
         return;
     }
-    Serial.printf("[IK] target %.1f %.1f %.1f -> C=%.1f F=%.1f T=%.1f\n", x, y, z, a.coxa, a.femur, a.tibia);
+    Serial.printf("[IK] %.1f %.1f %.1f -> C=%.1f F=%.1f T=%.1f\n", x, y, z, a.coxa, a.femur, a.tibia);
 }
 
 void MotionController::setGait(const String& mode) {
@@ -152,15 +155,12 @@ void MotionController::stopGait() {
 }
 
 const GaitController& MotionController::gait() const { return gaitController; }
-const MotionSet& MotionController::motionSet() const { return motionSet; }
-const SafetyManager& MotionController::safety() const { return safetyManager; }
 bool MotionController::jumping() const { return jumpActive; }
 
 void MotionController::center() {
     if (!safetyManager.canMove()) return;
-    for (uint8_t i = 0; i < RobotConfig::LEG_COUNT; ++i) {
+    for (uint8_t i = 0; i < LEG_COUNT; ++i)
         setLeg(static_cast<LegID>(i), 90, 90, 90);
-    }
 }
 
 void MotionController::stand() {
@@ -169,27 +169,10 @@ void MotionController::stand() {
 
     const float x = RobotConfig::BODY_LENGTH_MM * 0.5f;
     const float y = RobotConfig::BODY_WIDTH_MM * 0.5f;
-    for (uint8_t i = 0; i < RobotConfig::LEG_COUNT; ++i) {
+    for (uint8_t i = 0; i < LEG_COUNT; ++i) {
         const float sx = (i == FL || i == FR) ? x : -x;
         const float sy = (i == FL || i == RL) ? y : -y;
         setFootTarget(static_cast<LegID>(i), sx, sy, RobotConfig::DEFAULT_BODY_Z_MM);
-    }
-}
-
-void MotionController::applyPose(MotionSet::Pose pose) {
-    if (!safetyManager.canMove()) return;
-    const float x = RobotConfig::BODY_LENGTH_MM * 0.5f;
-    const float y = RobotConfig::BODY_WIDTH_MM * 0.5f;
-    float z = RobotConfig::DEFAULT_BODY_Z_MM;
-    if (pose == MotionSet::Pose::CROUCH) z += 20.0f;
-    else if (pose == MotionSet::Pose::SIT) z += 30.0f;
-    else if (pose == MotionSet::Pose::READY) z += 5.0f;
-    else if (pose == MotionSet::Pose::RECOVERY) z += 10.0f;
-
-    for (uint8_t i = 0; i < RobotConfig::LEG_COUNT; ++i) {
-        const float sx = (i == FL || i == FR) ? x : -x;
-        const float sy = (i == FL || i == RL) ? y : -y;
-        setFootTarget(static_cast<LegID>(i), sx, sy, z);
     }
 }
 
@@ -220,7 +203,7 @@ float MotionController::jumpPhaseProgress(unsigned long elapsed, unsigned long d
 void MotionController::applyJumpPose(float z) {
     const float x = RobotConfig::BODY_LENGTH_MM * 0.5f;
     const float y = RobotConfig::BODY_WIDTH_MM * 0.5f;
-    for (uint8_t i = 0; i < RobotConfig::LEG_COUNT; ++i) {
+    for (uint8_t i = 0; i < LEG_COUNT; ++i) {
         const float sx = (i == FL || i == FR) ? x : -x;
         const float sy = (i == FL || i == RL) ? y : -y;
         setFootTarget(static_cast<LegID>(i), sx, sy, z);
@@ -234,9 +217,12 @@ void MotionController::updateJump() {
 
     switch (jumpPhase) {
         case JumpPhase::CROUCH: duration = 180; z = -70.0f; break;
+        case JumpPhase::LOAD: duration = 100; z = -78.0f; break;
         case JumpPhase::PUSH: duration = 120; z = -105.0f; break;
         case JumpPhase::FLIGHT: duration = 180; z = -115.0f; break;
+        case JumpPhase::TUCK: duration = 100; z = -105.0f; break;
         case JumpPhase::LAND: duration = 140; z = -82.0f; break;
+        case JumpPhase::ABSORB: duration = 120; z = -78.0f; break;
         case JumpPhase::RECOVER: duration = 180; z = RobotConfig::DEFAULT_BODY_Z_MM; break;
         default: finishJump(); return;
     }
@@ -245,10 +231,13 @@ void MotionController::updateJump() {
     if (elapsed < duration) return;
 
     switch (jumpPhase) {
-        case JumpPhase::CROUCH: jumpPhase = JumpPhase::PUSH; break;
+        case JumpPhase::CROUCH: jumpPhase = JumpPhase::LOAD; break;
+        case JumpPhase::LOAD: jumpPhase = JumpPhase::PUSH; break;
         case JumpPhase::PUSH: jumpPhase = JumpPhase::FLIGHT; break;
-        case JumpPhase::FLIGHT: jumpPhase = JumpPhase::LAND; break;
-        case JumpPhase::LAND: jumpPhase = JumpPhase::RECOVER; break;
+        case JumpPhase::FLIGHT: jumpPhase = JumpPhase::TUCK; break;
+        case JumpPhase::TUCK: jumpPhase = JumpPhase::LAND; break;
+        case JumpPhase::LAND: jumpPhase = JumpPhase::ABSORB; break;
+        case JumpPhase::ABSORB: jumpPhase = JumpPhase::RECOVER; break;
         case JumpPhase::RECOVER: finishJump(); return;
         default: finishJump(); return;
     }
@@ -265,13 +254,12 @@ void MotionController::status() const {
     Serial.printf("[MOTION] safety=%s estop=%s gait=%s phase=%.3f step=%.1f/%.1f\n",
         safetyManager.enabled() ? "ON" : "OFF",
         safetyManager.emergency() ? "YES" : "NO",
-        gaitController.mode(), gaitController.phase(),
-        gaitController.stepLength(), gaitController.stepHeight());
+        gaitController.mode(), gaitController.phase(), gaitController.stepLength(), gaitController.stepHeight());
 }
 
 void MotionController::debug() const {
     status();
-    for (uint8_t i = 0; i < RobotConfig::LEG_COUNT; ++i)
+    for (uint8_t i = 0; i < LEG_COUNT; ++i)
         Serial.printf("[%s] C=%.1f F=%.1f T=%.1f\n", LEG_NAMES[i], legs[i].coxa, legs[i].femur, legs[i].tibia);
 }
 
