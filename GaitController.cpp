@@ -11,7 +11,7 @@ constexpr float MAX_DT = 0.10f;
 }
 
 GaitController::GaitController()
-    : phaseValue(0),
+    : phaseValue(0.0f),
       stepLengthValue(RobotConfig::DEFAULT_STEP_LENGTH_MM),
       stepHeightValue(RobotConfig::DEFAULT_STEP_HEIGHT_MM),
       frequencyValue(RobotConfig::DEFAULT_GAIT_FREQUENCY_HZ),
@@ -19,64 +19,70 @@ GaitController::GaitController()
       targetStepHeight(RobotConfig::DEFAULT_STEP_HEIGHT_MM),
       targetFrequency(RobotConfig::DEFAULT_GAIT_FREQUENCY_HZ),
       bodyHeight(RobotConfig::DEFAULT_BODY_Z_MM),
-      speedValue(0),
-      targetSpeed(0),
+      speedValue(0.0f),
+      targetSpeed(0.0f),
       active(false),
       modeName("IDLE") {}
 
-void GaitController::reset() {
-    phaseValue = 0;
+void GaitController::reset()
+{
+    phaseValue = 0.0f;
     stepLengthValue = targetStepLength = RobotConfig::DEFAULT_STEP_LENGTH_MM;
     stepHeightValue = targetStepHeight = RobotConfig::DEFAULT_STEP_HEIGHT_MM;
     frequencyValue = targetFrequency = RobotConfig::DEFAULT_GAIT_FREQUENCY_HZ;
-    speedValue = targetSpeed = 0;
+    bodyHeight = RobotConfig::DEFAULT_BODY_Z_MM;
+    speedValue = targetSpeed = 0.0f;
     active = false;
     modeName = "IDLE";
 }
 
-void GaitController::configure(float stepLength, float stepHeight, float frequency) {
-    targetStepLength = fminf(stepLength, RobotConfig::MAX_STEP_LENGTH_MM);
-    targetStepHeight = fminf(stepHeight, RobotConfig::MAX_STEP_HEIGHT_MM);
-    targetFrequency = frequency;
-    targetSpeed = 1.0f;
+void GaitController::configure(float stepLength, float stepHeight, float frequency)
+{
+    targetStepLength = fmaxf(0.0f, fminf(stepLength, RobotConfig::MAX_STEP_LENGTH_MM));
+    targetStepHeight = fmaxf(0.0f, fminf(stepHeight, RobotConfig::MAX_STEP_HEIGHT_MM));
+    targetFrequency = fmaxf(0.1f, fminf(frequency, RobotConfig::MAX_GAIT_FREQUENCY_HZ));
+    targetSpeed = RobotConfig::MAX_COMMAND_SPEED_SCALE;
     active = true;
 }
 
-void GaitController::setMode(const String& mode) {
+void GaitController::setMode(const String& mode)
+{
     String m = mode;
     m.trim();
     m.toUpperCase();
 
     if (m == "STABLE" || m == "STABLE_WALK") {
-        configure(24, 18, 1.10f);
+        configure(24.0f, 16.0f, 1.00f);
         modeName = "STABLE_WALK";
     } else if (m == "WALK" || m == "CRUISE") {
-        configure(32, 20, 1.55f);
+        configure(30.0f, 18.0f, 1.35f);
         modeName = (m == "CRUISE" ? "CRUISE" : "WALK");
     } else if (m == "FAST" || m == "FAST_WALK") {
-        configure(42, 24, 1.90f);
+        configure(38.0f, 22.0f, 1.80f);
         modeName = "FAST";
     } else if (m == "SLOW_WALK") {
-        configure(20, 16, 0.95f);
+        configure(18.0f, 14.0f, 0.80f);
         modeName = "SLOW_WALK";
     } else if (m == "SEARCH") {
-        configure(18, 14, 0.80f);
+        configure(16.0f, 12.0f, 0.70f);
         modeName = "SEARCH";
     } else if (m == "RESCUE") {
-        configure(14, 12, 0.70f);
+        configure(14.0f, 11.0f, 0.60f);
         modeName = "RESCUE";
     } else {
         reset();
     }
 }
 
-void GaitController::stop() {
-    targetSpeed = 0;
+void GaitController::stop()
+{
+    targetSpeed = 0.0f;
     active = false;
     modeName = "IDLE";
 }
 
-void GaitController::update(float dt) {
+void GaitController::update(float dt)
+{
     dt = fmaxf(MIN_DT, fminf(dt, MAX_DT));
     const float blend = fminf(1.0f, dt * PARAM_RATE);
 
@@ -91,49 +97,45 @@ void GaitController::update(float dt) {
         speedValue = fmaxf(targetSpeed, speedValue - ramp);
 
     if (speedValue <= 0.001f) {
-        speedValue = 0;
+        speedValue = 0.0f;
         return;
     }
 
     phaseValue += dt * frequencyValue * speedValue;
-    while (phaseValue >= 1.0f)
-        phaseValue -= 1.0f;
+    while (phaseValue >= 1.0f) phaseValue -= 1.0f;
+    while (phaseValue < 0.0f) phaseValue += 1.0f;
 }
 
-float GaitController::legY(GaitLeg leg) const {
-    constexpr float HALF_BODY_WIDTH = RobotConfig::BODY_WIDTH_MM * 0.5f;
-    return (leg == GAIT_FL || leg == GAIT_RL)
-        ? HALF_BODY_WIDTH
-        : -HALF_BODY_WIDTH;
+float GaitController::legY(GaitLeg leg) const
+{
+    const float halfWidth = RobotConfig::BODY_WIDTH_MM * 0.5f;
+    return (leg == GAIT_FL || leg == GAIT_RL) ? halfWidth : -halfWidth;
 }
 
-float GaitController::phaseOffset(GaitLeg leg) const {
-    // Diagonal tripod groups: FL+RR / FR+RL.
+float GaitController::phaseOffset(GaitLeg leg) const
+{
+    // True diagonal tripod: FL+RR / FR+RL.
     return (leg == GAIT_FL || leg == GAIT_RR) ? 0.0f : 0.5f;
 }
 
-FootTarget GaitController::calculate(GaitLeg leg) const {
-    const float y = legY(leg);
-    const float centerX = 0.0f;
+FootTarget GaitController::calculate(GaitLeg leg) const
+{
+    const float halfLength = RobotConfig::BODY_LENGTH_MM * 0.5f;
+    const float centerX = (leg == GAIT_FL || leg == GAIT_FR) ? halfLength : -halfLength;
     const float phase = phaseValue - phaseOffset(leg);
-    const bool mirrored = (leg == GAIT_FR || leg == GAIT_RL);
 
-    TrajectoryPoint p = FootTrajectory::tripod(
+    // phaseOffset already creates the diagonal gait; do not apply a second mirror offset.
+    const TrajectoryPoint p = FootTrajectory::tripod(
         phase,
         centerX,
-        y,
+        legY(leg),
         bodyHeight,
         stepLengthValue * speedValue,
         stepHeightValue * speedValue,
-        mirrored
+        false
     );
 
-    FootTarget result;
-    result.x = p.x;
-    result.y = p.y;
-    result.z = p.z;
-    result.swing = p.swing;
-    return result;
+    return {p.x, p.y, p.z, p.swing};
 }
 
 FootTarget GaitController::target(GaitLeg leg) const { return calculate(leg); }
