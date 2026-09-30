@@ -145,8 +145,17 @@ void MotionController::testIK(float x, float y, float z) const {
 }
 
 void MotionController::setGait(const String& mode) {
-    gaitController.setMode(mode);
-    motionSet.setAction(MotionSet::Action::WALK_FORWARD);
+    String m = mode;
+    m.trim();
+    m.toUpperCase();
+    gaitController.setMode(m);
+
+    if (m == "SEARCH") motionSet.setAction(MotionSet::Action::SEARCH);
+    else if (m == "RESCUE") motionSet.setAction(MotionSet::Action::RESCUE);
+    else if (m == "TURN_LEFT") motionSet.setAction(MotionSet::Action::TURN_LEFT);
+    else if (m == "TURN_RIGHT") motionSet.setAction(MotionSet::Action::TURN_RIGHT);
+    else if (m == "BACKWARD") motionSet.setAction(MotionSet::Action::WALK_BACKWARD);
+    else motionSet.setAction(MotionSet::Action::WALK_FORWARD);
 }
 
 void MotionController::stopGait() {
