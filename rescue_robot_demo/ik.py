@@ -12,71 +12,70 @@ class JointAngles:
 
 
 class QuadrupedIK:
-    """Hardware-aligned 3-DOF leg IK model.
+    """Simulator IK aligned with the 35 cm ESP32 motion model.
 
-    Geometry matches AI_CONTEXT.md:
-      coxa = 45 mm
-      femur = 75 mm
-      tibia = 105 mm
+    Geometry:
+      coxa = 35 mm
+      femur = 65 mm
+      tibia = 85 mm
 
-    This is a simulator/reachability model. It does not replace the ESP32
-    Kinematics implementation or physical servo calibration.
+    Returned joint angles use the same 0..180 logical servo space as the
+    firmware. Mechanical offsets/inversion remain the responsibility of
+    ServoCalibration on the ESP32.
     """
 
-    COXA = 45.0
-    FEMUR = 75.0
-    TIBIA = 105.0
+    COXA = 35.0
+    FEMUR = 65.0
+    TIBIA = 85.0
+
+    COXA_MIN = 15.0
+    COXA_MAX = 165.0
+    FEMUR_MIN = 15.0
+    FEMUR_MAX = 165.0
+    TIBIA_MIN = 10.0
+    TIBIA_MAX = 170.0
 
     def solve(self, x, y, z):
         x = float(x)
         y = float(y)
         z = float(z)
 
-        coxa = math.degrees(math.atan2(y, x))
-
+        coxa = 90.0 + math.degrees(math.atan2(y, x))
         horizontal = math.hypot(x, y) - self.COXA
         distance = math.hypot(horizontal, z)
 
-        min_reach = abs(self.FEMUR - self.TIBIA)
-        max_reach = self.FEMUR + self.TIBIA
+        min_reach = abs(self.FEMUR - self.TIBIA) + 0.5
+        max_reach = self.FEMUR + self.TIBIA - 0.5
 
-        if distance < min_reach or distance > max_reach:
-            return JointAngles(coxa, 0.0, 0.0, False, "OUT_OF_REACH")
+        if distance <= 1e-6 or distance < min_reach or distance > max_reach:
+            return JointAngles(round(coxa, 3), 90.0, 90.0, False, "OUT_OF_REACH")
 
         cos_knee = (
-            distance * distance
-            - self.FEMUR * self.FEMUR
-            - self.TIBIA * self.TIBIA
+            self.FEMUR * self.FEMUR
+            + self.TIBIA * self.TIBIA
+            - distance * distance
         ) / (2.0 * self.FEMUR * self.TIBIA)
         cos_knee = max(-1.0, min(1.0, cos_knee))
+        knee_internal = math.acos(cos_knee)
 
-        knee = math.degrees(math.acos(cos_knee))
-
-        alpha = math.atan2(z, horizontal)
-        beta = math.acos(
-            max(
-                -1.0,
-                min(
-                    1.0,
-                    (
-                        self.FEMUR * self.FEMUR
-                        + distance * distance
-                        - self.TIBIA * self.TIBIA
-                    )
-                    / (2.0 * self.FEMUR * distance),
-                ),
-            )
+        femur_geometry = math.atan2(z, horizontal) + math.atan2(
+            self.TIBIA * math.sin(knee_internal),
+            self.FEMUR + self.TIBIA * math.cos(knee_internal),
         )
 
-        femur = math.degrees(alpha + beta)
+        femur = 90.0 + math.degrees(femur_geometry)
+        tibia = 180.0 - math.degrees(knee_internal)
 
-        return JointAngles(
-            round(coxa, 3),
-            round(femur, 3),
-            round(knee, 3),
-            True,
-            "OK",
+        valid = (
+            self.COXA_MIN <= coxa <= self.COXA_MAX
+            and self.FEMUR_MIN <= femur <= self.FEMUR_MAX
+            and self.TIBIA_MIN <= tibia <= self.TIBIA_MAX
         )
+
+        if not valid:
+            return JointAngles(round(coxa, 3), round(femur, 3), round(tibia, 3), False, "JOINT_LIMIT")
+
+        return JointAngles(round(coxa, 3), round(femur, 3), round(tibia, 3), True, "OK")
 
     def solve_all(self, targets):
         return {leg: self.solve(t.x, t.y, t.z) for leg, t in targets.items()}
