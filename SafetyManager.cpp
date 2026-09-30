@@ -62,27 +62,23 @@ bool SafetyManager::validateStep(float length, float height) const
 
 float SafetyManager::clampServoAngle(float angle) const
 {
-    if (angle < RobotConfig::SERVO_MIN_DEG)
-        return RobotConfig::SERVO_MIN_DEG;
-    if (angle > RobotConfig::SERVO_MAX_DEG)
-        return RobotConfig::SERVO_MAX_DEG;
+    if (angle < RobotConfig::SERVO_MIN_DEG) return RobotConfig::SERVO_MIN_DEG;
+    if (angle > RobotConfig::SERVO_MAX_DEG) return RobotConfig::SERVO_MAX_DEG;
     return angle;
 }
 
 float SafetyManager::clampStepLength(float length) const
 {
     if (length < 0.0f) return 0.0f;
-    if (length > RobotConfig::MAX_STEP_LENGTH_MM)
-        return RobotConfig::MAX_STEP_LENGTH_MM;
-    return length;
+    return length > RobotConfig::MAX_STEP_LENGTH_MM
+        ? RobotConfig::MAX_STEP_LENGTH_MM : length;
 }
 
 float SafetyManager::clampStepHeight(float height) const
 {
     if (height < 0.0f) return 0.0f;
-    if (height > RobotConfig::MAX_STEP_HEIGHT_MM)
-        return RobotConfig::MAX_STEP_HEIGHT_MM;
-    return height;
+    return height > RobotConfig::MAX_STEP_HEIGHT_MM
+        ? RobotConfig::MAX_STEP_HEIGHT_MM : height;
 }
 
 bool SafetyManager::enabled() const { return enabled_; }
