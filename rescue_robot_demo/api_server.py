@@ -131,6 +131,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"error": "not found"}, 404)
 
     def do_POST(self):
+        global tasks
         path = self.path.split("?", 1)[0]
         try:
             data = self.read_json()
