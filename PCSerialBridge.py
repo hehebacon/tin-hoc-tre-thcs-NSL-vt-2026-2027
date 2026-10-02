@@ -12,7 +12,12 @@ import time
 import select
 
 
-ALLOWED_COMMANDS = {"STOP", "RESUME", "CENTER", "STAND"}
+ALLOWED_COMMANDS = {
+    "STOP", "RESUME", "ENABLE", "CENTER", "STAND", "RESCUE_DONE",
+    "GAIT WALK", "GAIT SLOW_WALK", "GAIT SEARCH", "GAIT RESCUE",
+    "MISSION PATROL", "MISSION SEARCH", "MISSION RESCUE", "MISSION RETURN_HOME",
+    "GOAL PATROL", "GOAL RESCUE", "GOAL RETURN_HOME",
+}
 
 
 def run(port, baud):
@@ -40,7 +45,15 @@ def run(port, baud):
             if ready:
                 raw = sys.stdin.readline().strip().upper()
                 if raw in ALLOWED_COMMANDS:
-                    packet = {"type": "command", "command": raw}
+                    parts = raw.split()
+                    if parts[0] == "GAIT":
+                        packet = {"type": "command", "command": "GAIT", "mode": parts[1]}
+                    elif parts[0] == "MISSION":
+                        packet = {"type": "command", "command": "MISSION", "mode": parts[1]}
+                    elif parts[0] == "GOAL":
+                        packet = {"type": "command", "command": "GOAL", "goal": parts[1]}
+                    else:
+                        packet = {"type": "command", "command": raw}
                     link.write((json.dumps(packet) + "\n").encode())
                     print("PC ->", packet)
 
