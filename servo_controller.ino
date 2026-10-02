@@ -518,7 +518,17 @@ void processCommand(String command)
         return;
     }
 
-    if (command == "jump") {\n        if (safetyStopLatched || !motionSafety.allowed()) {\n            Serial.println("[SAFETY] jump blocked");\n            return;\n        }\n\n        motionController.jump();\n        motionSafety.noteMotionCommand();\n        return;\n    }\n\n    if (command == "stop") {
+    if (command == "jump") {
+        if (safetyStopLatched || !motionSafety.allowed()) {
+            Serial.println("[SAFETY] jump blocked");
+            return;
+        }
+
+        motionController.jump();
+        motionSafety.noteMotionCommand();
+        return;
+    }
+\n    if (command == "stop") {
         safetyStopLatched = true;
         motionSafety.emergencyStop();
         motionController.disable();
