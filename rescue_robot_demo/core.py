@@ -9,8 +9,8 @@ DIRS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
 class Pathfinder:
     def __init__(self, width, height, obstacles, terrain=None):
-        self.width = width
-        self.height = height
+        self.width = int(width)
+        self.height = int(height)
         self.obstacles = set(obstacles)
         self.terrain = terrain or {}
 
@@ -89,35 +89,45 @@ class RescueCore:
     )
 
     def __init__(self, width, height, obstacles, base, victim):
-        terrain = {}
-        for point in [
-            (9, 3), (10, 3), (11, 3),
-            (18, 6), (19, 6), (19, 7),
-        ]:
-            terrain[point] = 12.0
+        terrain = {
+            (9, 3): 12.0,
+            (10, 3): 12.0,
+            (11, 3): 12.0,
+            (18, 6): 12.0,
+            (19, 6): 12.0,
+            (19, 7): 12.0,
+        }
 
         self.pathfinder = Pathfinder(width, height, obstacles, terrain)
-        self.base = base
-        self.victim = victim
-        self.robot = base
+        self.base = tuple(base)
+        self.victim = tuple(victim)
+        self.robot = self.base
 
         self.mode = "PATROL"
         self.path = []
         self.found = False
         self.searching = False
-        self.emergency_stop = False\n        self.jump.stop()
+        self.emergency_stop = False
 
-        self.gait = GaitPlanner()\n        self.jump = JumpPlanner()
+        self.gait = GaitPlanner()
+        self.jump = JumpPlanner()
         self.ik = QuadrupedIK()
-        self.last_leg_targets = self.gait.snapshot(moving=False)
+
+        # Gait.snapshot() is intentionally serializable. The core needs
+        # LegTarget objects, so use update() here instead of snapshot().
+        self.last_leg_targets = self.gait.update(0.05, moving=False)
         self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
 
         self.patrol_points = [
-            base,
-            (base[0] + 4, base[1]),
-            (base[0] + 4, base[1] + 5),
-            (base[0], base[1] + 5),
+            self.base,
+            (self.base[0] + 4, self.base[1]),
+            (self.base[0] + 4, self.base[1] + 5),
+            (self.base[0], self.base[1] + 5),
         ]
+        self.patrol_points = [
+            p for p in self.patrol_points if self.pathfinder.valid(p)
+        ] or [self.base]
+
         self.patrol_index = 0
         self.last_target = None
         self.search_radius = 0
@@ -125,6 +135,7 @@ class RescueCore:
         self.log = ["SYSTEM READY"]
 
     def log_event(self, message):
+        message = str(message)
         if not self.log or self.log[0] != message:
             self.log.insert(0, message)
             self.log = self.log[:20]
@@ -138,24 +149,27 @@ class RescueCore:
         self.last_target = None
         self.searching = mode in ("RESCUE", "OSINT")
 
-        if mode == "JUMP":\n            self.gait.set_moveset("IDLE")\n            self.jump.start()\n        elif mode in ("PATROL", "RETURN_HOME", "DELIVER", "RECHARGE"):
+        if mode == "JUMP":
+            self.gait.set_moveset("IDLE")
+            self.jump.start()
+        elif mode in ("PATROL", "RETURN_HOME", "DELIVER", "RECHARGE"):
+            self.jump.stop()
             self.gait.set_moveset("STABLE_WALK")
         elif mode == "RESCUE":
+            self.jump.stop()
             self.gait.set_moveset("RESCUE")
-        elif mode in ("EXPLORE", "DEMO"):
-            self.gait.set_moveset("CRUISE")
-        elif mode == "AUTONOMOUS":
-            # Competition travel uses cruise by default; FAST can be selected
-            # explicitly after the physical platform is validated.
+        elif mode in ("EXPLORE", "DEMO", "AUTONOMOUS"):
+            self.jump.stop()
             self.gait.set_moveset("CRUISE")
         elif mode in ("FOLLOW", "AVOID", "SEARCH", "INSPECT", "OSINT"):
+            self.jump.stop()
             self.gait.set_moveset("SEARCH")
         elif mode == "CLIMB":
+            self.jump.stop()
             self.gait.set_moveset("IDLE")
-            self.log_event(
-                "WALL CLIMB STANDBY - HARDWARE DRIVER REQUIRED"
-            )
+            self.log_event("WALL CLIMB STANDBY - HARDWARE DRIVER REQUIRED")
         elif mode == "CALIBRATION":
+            self.jump.stop()
             self.gait.set_moveset("IDLE")
             self.log_event("CALIBRATION MODE")
 
@@ -163,13 +177,16 @@ class RescueCore:
         return True
 
     def set_target(self, target):
+        target = tuple(target)
         self.last_target = target
         self.path = self.pathfinder.find(self.robot, target)
+        return bool(self.path)
 
     def stop(self):
         self.emergency_stop = True
         self.path = []
         self.gait.set_moveset("IDLE")
+        self.jump.stop()
         self.log_event("EMERGENCY STOP")
 
     def resume(self):
@@ -183,7 +200,7 @@ class RescueCore:
 
         self.set_target(self.base)
         self.log_event("RETURN HOME REQUESTED")
-        return bool(self.path)
+        return bool(self.path) or self.robot == self.base
 
     def terrain_at(self):
         return {
@@ -201,28 +218,46 @@ class RescueCore:
         if self.mode == "PATROL":
             target = self.patrol_points[self.patrol_index]
             if self.robot == target:
-                self.patrol_index = (self.patrol_index + 1) % len(self.patrol_points)
-                self.path = []
+                self.patrol_index = (
+                    (self.patrol_index + 1) % len(self.patrol_points)
+                )
                 target = self.patrol_points[self.patrol_index]
             return target
 
-        if self.mode == "RESCUE":
+        if self.mode in ("RESCUE", "AUTONOMOUS"):
             return self.base if self.found else self.victim
 
-        if self.mode == "AUTONOMOUS":
-            return self.base if self.found else self.victim
+        if self.mode == "RETURN_HOME":
+            return self.base
 
         return self.base
 
+    def _update_motion_targets(self, dt, moving):
+        self.last_leg_targets = self.gait.update(dt, moving=moving)
+        self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
+
     def step(self, dt=0.05):
+        dt = max(0.001, min(0.1, float(dt)))
+
         if self.emergency_stop:
-            self.last_leg_targets = self.gait.update(dt, moving=False)
-            self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
+            self._update_motion_targets(dt, moving=False)
             return
 
-        if self.mode == "JUMP":\n            state = self.jump.update(dt)\n            self.last_leg_targets = {leg: self.jump.leg_pose(leg) for leg in self.gait.LEGS}\n            self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)\n            if self.jump.done:\n                self.mode = "PATROL"\n                self.gait.set_moveset("STABLE_WALK")\n                self.log_event("JUMP COMPLETE -> STABLE_WALK")\n            return\n\n        if self.mode in ("CLIMB", "CALIBRATION"):
-            self.last_leg_targets = self.gait.update(dt, moving=False)
+        if self.mode == "JUMP":
+            jump_state = self.jump.update(dt)
+            self.last_leg_targets = {
+                leg: self.jump.leg_pose(leg) for leg in self.gait.LEGS
+            }
             self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
+
+            if jump_state["phase"] == "DONE" or self.jump.done:
+                self.mode = "PATROL"
+                self.gait.set_moveset("STABLE_WALK")
+                self.log_event("JUMP COMPLETE -> STABLE_WALK")
+            return
+
+        if self.mode in ("CLIMB", "CALIBRATION"):
+            self._update_motion_targets(dt, moving=False)
             return
 
         target = self._select_target()
@@ -242,16 +277,18 @@ class RescueCore:
             self.set_target(target)
 
         moving = bool(self.path)
-        self.last_leg_targets = self.gait.update(dt, moving=moving)
-        self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
+        self._update_motion_targets(dt, moving=moving)
 
     def report_found(self):
-        if not self.found:
-            self.found = True
-            self.searching = False
-            self.path = []
-            self.gait.set_moveset("RESCUE")
-            self.log_event(f"PERSON FOUND @ {self.victim}")
+        if self.found:
+            return
+
+        self.found = True
+        self.searching = False
+        self.path = []
+        self.last_target = self.base
+        self.gait.set_moveset("RESCUE")
+        self.log_event(f"PERSON FOUND @ {self.victim}")
 
     def reset(self):
         self.robot = self.base
@@ -263,6 +300,8 @@ class RescueCore:
         self.mode = "PATROL"
         self.last_target = None
         self.search_radius = 0
-        self.gait.reset()\n        self.jump.stop()
-        self.last_leg_targets = self.gait.snapshot(moving=False)
+        self.jump.stop()
+        self.gait.reset()
+        self.last_leg_targets = self.gait.update(0.05, moving=False)
+        self.last_joint_angles = self.ik.solve_all(self.last_leg_targets)
         self.log = ["SYSTEM RESET"]
