@@ -72,7 +72,10 @@ def upper_body():
 def lower_body():
     # Lower pan with battery bay and serviceable lid interface.
     outer = Pos(0,0,-15) * Box(BODY_L, BODY_W, 30)
-    cavity = Pos(-5,0,-12) * Box(BATTERY_CAVITY[0]+8, BATTERY_CAVITY[1]+8, 25)
+    # The lower shell is 30 mm thick. Keep a 3 mm floor and open the bay at
+    # the split plane: 27 mm maximum cavity depth; the 28 mm battery target
+    # is NOT yet guaranteed to fit and must be checked against the real pack.
+    cavity = Pos(-5,0,-13.5) * Box(BATTERY_CAVITY[0]+8, BATTERY_CAVITY[1]+8, 27)
     part = outer - cavity
     # Battery retention rails and end stops (leave top open for insertion).
     part += Pos(-5,-25,-18) * Box(120,4,8)
@@ -178,7 +181,8 @@ def export_all():
     export(upper_body()+lower_body(),"ASSEMBLY_body_closed_preview_v6")
     export(electronics_tray(),"PRINT_electronics_tray_v6")
     export(head_module(),"PRINT_head_complete_v6")
-    export(dorsal_armor(),"PRINT_dorsal_spines_complete_v6")
+    # Spikes are integrated into PRINT_body_upper_v6. Do not also export the
+    # separate legacy carrier as a second, overlapping set of spikes.
     export(coxa_housing(),"PRINT_coxa_housing_v6")
     export(leg_armor(COXA,22,24),"PRINT_coxa_armor_v6")
     export(leg_armor(FEMUR,25,28),"PRINT_femur_armor_v6")
