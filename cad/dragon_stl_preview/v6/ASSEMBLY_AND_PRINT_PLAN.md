@@ -12,14 +12,14 @@
 
 ## Critical dimensions currently encoded
 - Main body envelope: 180 x 84 x 60 mm nominal (refined compact body).
-- Battery cavity target: 112 x 42 x 28 mm.
+- Battery pack target: 105 x 35 x 25 mm; current lower-shell bay cut is 120 x 50 x 27 mm, with a 3 mm floor. Confirm actual pack, insulation, retainer and wiring fit; 28 mm internal depth is not achieved in the current 30 mm lower shell.
 - Leg segment design parameters: coxa 40 mm, femur 75 mm, tibia 85 mm.
 - Nominal M3 clearance: 3.2 mm.
 - Bearing reference: 688ZZ, OD 16 / ID 8 / width 5 mm (press fit must be calibrated).
 
 ## Before calling V6 final
 - [ ] Run `dragon_v6_build.py` in a build123d environment and ensure all exports succeed.
-- [ ] Run mesh repair / watertightness / normals / non-manifold checks on every STL.
+- [ ] Run `python check_stl_meshes.py out_v6`; repair every non-watertight, inconsistent-winding or zero-volume mesh before printing.
 - [ ] Confirm the complete robot stays inside the 350 mm competition envelope; tail and leg sweep can exceed static body bounds.
 - [ ] Measure actual DS3225 servo bodies, horns, screws, wiring bend radius and connector access.
 - [ ] Validate all M3 screw paths, insert depths, head clearance, and upper/lower body alignment.
