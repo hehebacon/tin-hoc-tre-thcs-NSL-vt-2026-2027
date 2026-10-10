@@ -198,8 +198,8 @@ def make_legs():
         # Coxa 45 mm, femur 75 mm, tibia 105 mm. Vertical drop is chosen to
         # preserve useful ground clearance while respecting each link length.
         coxa = (hip[0]+sx*20.25, hip[1]+sy*40.18, -9)
-        femur = (coxa[0]+sx*35, coxa[1]+sy*18, coxa[2]-64.3)
-        foot_joint = (femur[0]+sx*27, femur[1]+sy*18, femur[2]-99.8)
+        femur = (coxa[0]+sx*35, coxa[1]+sy*18, coxa[2]-63.844)
+        foot_joint = (femur[0]+sx*27, femur[1]+sy*18, femur[2]-99.86)
         # Servo housings at all three axes; actual mounting details are separate follow-up work.
         for p in (hip, coxa, femur):
             groups[name + "_leg"].append(rb(SERVO_X, SERVO_Y, SERVO_Z, 3).translate(p))
