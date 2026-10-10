@@ -81,10 +81,22 @@ def make_body():
     cavity = rb(CAVITY_X, CAVITY_Y, CAVITY_Z, 3).translate((0, 0, cavity_center_z))
     shell = shell.cut(cavity)
 
+    # Four roof-connected bosses support M3 self-tapping screws for the belly panel.
+    # Their pilot holes align with the panel clearance holes; bosses are part of the shell.
+    panel_hole_x, panel_hole_y = PANEL_X * 0.38, PANEL_Y * 0.30
+    boss_z = -BODY_ROOF / 2 + 1.0
+    for x in (-panel_hole_x, panel_hole_x):
+        for y in (-panel_hole_y, panel_hole_y):
+            boss = Cylinder(4.2, BODY_Z - BODY_ROOF + 2.0,
+                align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, boss_z))
+            pilot = Cylinder(1.3, BODY_Z - BODY_ROOF + 4.0,
+                align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, boss_z))
+            shell = shell.fuse(boss.cut(pilot))
+
     panel_z = -BODY_Z / 2 - PANEL_THICK / 2 + 0.5
     panel = rb(PANEL_X, PANEL_Y, PANEL_THICK, 3).translate((0, 0, panel_z))
-    for x in (-PANEL_X * 0.42, PANEL_X * 0.42):
-        for y in (-PANEL_Y * 0.36, PANEL_Y * 0.36):
+    for x in (-panel_hole_x, panel_hole_x):
+        for y in (-panel_hole_y, panel_hole_y):
             panel = panel.cut(Cylinder(1.7, PANEL_THICK + 2,
                 align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, panel_z)))
 
@@ -182,11 +194,12 @@ def make_legs():
     # Keep internal leg labels (FL/FR/RL/RR) mapped to printable group names.
     for name, sx, sy in (("FL",-1,-1), ("FR",-1,1), ("RL",1,-1), ("RR",1,1)):
         hip = (sx*50, sy*34, -7)
-        # 40 mm coxa, 75 mm femur, 85 mm tibia. These are physical lengths,
-        # not scaled decorative approximations.
-        coxa = (hip[0]+sx*18, hip[1]+sy*35.72, -9)
+        # Keep the CAD link centerlines consistent with AI_CONTEXT.md / firmware IK.
+        # Coxa 45 mm, femur 75 mm, tibia 105 mm. Vertical drop is chosen to
+        # preserve useful ground clearance while respecting each link length.
+        coxa = (hip[0]+sx*20.25, hip[1]+sy*40.18, -9)
         femur = (coxa[0]+sx*35, coxa[1]+sy*18, coxa[2]-64.3)
-        foot_joint = (femur[0]+sx*22, femur[1]+sy*14, femur[2]-80.8)
+        foot_joint = (femur[0]+sx*27, femur[1]+sy*18, femur[2]-99.8)
         # Servo housings at all three axes; actual mounting details are separate follow-up work.
         for p in (hip, coxa, femur):
             groups[name + "_leg"].append(rb(SERVO_X, SERVO_Y, SERVO_Z, 3).translate(p))
@@ -246,7 +259,8 @@ def main():
         "No global scaling. DS3225 envelope remains 41 x 21 x 41 mm.",
         f"Parametric body: {BODY_X:.1f} x {BODY_Y:.1f} x {BODY_Z:.1f} mm; cavity {CAVITY_X:.1f} x {CAVITY_Y:.1f} mm.",
         "Body dimensions derive from electronics tray clearance and leg-servo mounting envelope.",
-        "Link centerline targets: coxa 40 mm, femur 75 mm, tibia 85 mm.",
+        "Link centerline targets: coxa 45 mm, femur 75 mm, tibia 105 mm (matches AI_CONTEXT.md / firmware IK).",
+        "Belly panel: 4 x M3 clearance holes aligned to 4 roof-connected 2.6 mm pilot bosses.",
         f"Bounding box: X={size[0]:.2f}, Y={size[1]:.2f}, Z={size[2]:.2f} mm",
         f"Hard envelope limit: {MAX_MM:.1f} mm",
         "NOTE: STEP/STL are design prototypes. Validate servo horn geometry, fasteners, wire routing, clearances and physical gait before printing the full set.",
