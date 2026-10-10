@@ -58,13 +58,13 @@ def scale_plate(width, height, thickness=3):
     return extrude(Face(wire), amount=thickness, dir=(0, 1, 0))
 
 def make_body():
-    shell = rb(180, 90, 60, 14)
-    cavity = rb(118, 54, 34, 8).translate((5, 0, -2))
+    shell = rb(180, 100, 60, 14)
+    cavity = rb(118, 62, 34, 8).translate((5, 0, -2))
     shell = shell.cut(cavity)
     # Removable lower panel and mounting bosses.
-    panel = rb(132, 62, 5, 3).translate((0, 0, -29))
+    panel = rb(132, 70, 5, 3).translate((0, 0, -29))
     for x in (-52, -18, 18, 52):
-        for y in (-23, 23):
+        for y in (-27, 27):
             panel = panel.cut(Cylinder(1.7, 8, align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, -29)))
     # Dorsal scale plates, kept separate as grouped printable detail.
     scales = []
@@ -76,7 +76,7 @@ def make_body():
         for row in range(2):
             for i, x in enumerate(range(-55, 56, 22)):
                 plate = scale_plate(21, 15, 3).rotate(Axis.X, 90)
-                scales.append(plate.translate((x, side*(45+row*2), -10+row*20)))
+                scales.append(plate.translate((x, side*(50+row*2), -10+row*20)))
     return shell, panel, scales
 
 def make_head():
@@ -192,7 +192,7 @@ def main():
     groups = {
         "body": [body] + scales,
         "head": head + neck,
-        "electronics": [panel, rb(112,48,4,2).translate((4,0,14))], # removable tray + board plate
+        "electronics": [panel, rb(112,56,4,2).translate((4,0,14))], # removable tray + board plate
         "wings": wings,
         "tail": tail,
         **legs,
