@@ -294,6 +294,11 @@ def main():
     head = make_head()
     neck = make_neck()
     tail = make_tail()
+    # Keep the complete assembly inside the 350 mm envelope without scaling
+    # servo housings or mechanical links: tuck the decorative head/tail inward.
+    head = [part.translate((3.0, 0, 0)) for part in head]
+    neck = [part.translate((3.0, 0, 0)) for part in neck]
+    tail = [part.translate((-3.0, 0, 0)) for part in tail]
     legs = make_legs()
     wings = [make_wing(-1), make_wing(1)]
     groups = {
