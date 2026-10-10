@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """XZORT Rescue Dragon quadruped CAD v3 — dragon silhouette redesign, dimensions in mm.
 
-Dragon silhouette priority: sculpted head, swept horns, broad bat wings, dorsal spines, layered armor scales, segmented tail.
+Dragon silhouette priority: sculpted head, swept horns, dorsal spines, layered armor scales, segmented tail; no wings.
 Mechanical geometry remains a four-legged, 12-servo rescue robot. No global scaling:
 servo envelopes and link lengths stay at their authored dimensions.
 """
@@ -194,31 +194,8 @@ def make_neck():
         parts.append(ring.fuse(collar))
     return parts
 
-def make_wing(side):
-    """Three-dimensional swept dragon wing with a thick leading spar and raised ribs."""
-    root = (-14, side*35, 22)
-    tips = [(side*52, 34), (side*79, 72), (side*101, 60), (side*116, 37)]
-    # Curved-looking scalloped membrane is deliberately thicker near the root.
-    outline = [
-        (0, side*29, 19), (0, side*42, 27), (0, side*57, 43),
-        (0, side*79, 72), (0, side*75, 48), (0, side*101, 60),
-        (0, side*91, 36), (0, side*116, 37), (0, side*98, 20),
-        (0, side*77, 10), (0, side*53, 8), (0, side*29, 19)
-    ]
-    membrane = extrude(Face(Polyline(outline, close=True)), amount=5.5, dir=(1,0,0)).translate((-18,0,0))
-    # Rounded, swept leading edge and muscular root give the wing visible depth.
-    spar = beam_between(root, (0, side*82, 68), 8.0, 7.0, 2.5)
-    shoulder = ball(16, 1.2, 1.0, .9).translate((-12, side*39, 25))
-    ribs = [spar]
-    for yy, zz in tips:
-        ribs.append(beam_between((-12, side*39, 25), (-12, yy, zz), 4.2, 3.6, 1.4))
-    # Small raised web ribs make the membrane read as a wing rather than a plate.
-    for yy, zz in [(side*59, 18), (side*77, 15), (side*94, 20), (side*108, 28)]:
-        ribs.append(beam_between((-11, side*43, 22), (-11, yy, zz), 2.8, 2.6, 1.0))
-    return Compound([membrane, shoulder] + ribs)
-
 def make_tail():
-    """Curled, segmented dragon tail with overlapping armor and a split blade-like tip."""
+    """Curled, segmented dragon tail with overlapping armor and a rounded sensor-cap tip."""
     parts = []
     # Centreline follows a broad curl down and back toward the front, like the reference.
     path = [
@@ -240,11 +217,12 @@ def make_tail():
             spike = Cone(radius*.48, .8, radius*1.15,
                          align=(Align.CENTER, Align.CENTER, Align.MIN))
             parts.append(spike.rotate(Axis.Y, 90).translate((a[0], 0, a[2]+radius*.5)))
-    # Flattened forked blade tip, oriented diagonally like the reference tail fin.
-    tip = beam_between((-47, 0, -25), (-68, 0, -10), 15, 5, 2)
-    fork_a = beam_between((-65, 0, -12), (-78, 0, -1), 8, 4, 1.5)
-    fork_b = beam_between((-65, 0, -12), (-76, 0, -24), 8, 4, 1.5)
-    parts += [tip, fork_a, fork_b]
+    # Rounded end-cap keeps the tail expressive without a sharp or blade-like feature.
+    tip = ball(8, 1.35, .95, .72).translate((-65, 0, -12))
+    sensor_boss = ball(4.5, 1.0, .8, .8).translate((-72, 0, -12))
+    side_lobe_a = ball(4.2, 1.25, .8, .8).translate((-68, -5, -7))
+    side_lobe_b = ball(4.2, 1.25, .8, .8).translate((-68, 5, -17))
+    parts += [tip, sensor_boss, side_lobe_a, side_lobe_b]
     return parts
 
 def make_legs():
@@ -298,12 +276,10 @@ def main():
     neck = [part.translate((3.0, 0, 0)) for part in neck]
     tail = [part.translate((-3.0, 0, 0)) for part in tail]
     legs = make_legs()
-    wings = [make_wing(-1), make_wing(1)]
     groups = {
         "body": [body] + scales,
         "head": head + neck,
         "electronics": [panel, rb(TRAY_X, TRAY_Y, TRAY_Z, 2).translate((0, 0, 5))], # tray follows parametric cavity
-        "wings": wings,
         "tail": tail,
         **legs,
     }
@@ -319,7 +295,7 @@ def main():
     export_step(Compound(all_shapes), str(OUT / "REF" / "full_assembly.step"))
     manifest = [
         "XZORT RESCUE DRAGON QUADRUPED v2",
-        "Reference style: dragon-1.png — curled plated body, sculpted horned head, swept scalloped wings and curved segmented tail",
+        "Reference style: dragon-1.png — curled plated body, sculpted horned head, no wings, curved segmented tail with rounded tip",
         "Mechanical layout: four legs / 12 servo housings",
         "No global scaling. DS3225 envelope remains 41 x 21 x 41 mm.",
         f"Parametric body: {BODY_X:.1f} x {BODY_Y:.1f} x {BODY_Z:.1f} mm; cavity {CAVITY_X:.1f} x {CAVITY_Y:.1f} mm.",
