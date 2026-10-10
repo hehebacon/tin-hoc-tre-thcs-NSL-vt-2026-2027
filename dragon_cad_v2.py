@@ -103,82 +103,85 @@ def make_body():
                 align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, panel_z)))
 
     armor = []
-    # Sculpted dorsal cuirass: overlapping convex plates soften the rectangular
-    # electronics chassis while leaving the underside hatch and cavity untouched.
-    dorsal = ball(1, BODY_X * 0.51, BODY_Y * 0.53, BODY_Z * 0.30)
-    dorsal = dorsal.translate((0, 0, BODY_Z * 0.30))
+    # Hide the rectangular electronics core beneath a C-shaped plated dragon torso.
+    # The armor path rises from the neck, arches over the back, curls under the belly,
+    # then returns toward the tail. Mechanical core and service hatch remain intact.
+    dorsal = ball(1, BODY_X * .49, BODY_Y * .49, BODY_Z * .28).translate((0, 0, BODY_Z * .28))
     armor.append(dorsal)
-    # Central ridge plates taper toward the neck and tail, like articulated dragon scutes.
-    for i, x in enumerate(range(int(-BODY_X * .34), int(BODY_X * .35), 12)):
-        t = abs(x) / max(BODY_X * .35, 1)
-        w = 22 - 7*t
-        h = 17 - 5*t
-        plate = scale_plate(w, h, 4.0).rotate(Axis.X, 90)
-        armor.append(plate.translate((x, 0, BODY_Z/2 + 4.0)))
-        if i % 2 == 0:
-            ridge = Cone(7.0 - 1.5*t, 0.8, 14 - 2*t,
-                         align=(Align.CENTER, Align.CENTER, Align.MIN))
-            armor.append(ridge.rotate(Axis.Y, 90).translate((x, 0, BODY_Z/2 + 8)))
-        # Short paired side spines break up the smooth box silhouette without covering the hatch.
-        for side in (-1, 1):
-            if i % 2 == 0:
-                side_spine = Cone(4.8 - 1.0*t, 0.7, 9.0 - 1.0*t,
-                                  align=(Align.CENTER, Align.CENTER, Align.MIN))
-                armor.append(side_spine.rotate(Axis.X, side*24).translate((x, side*BODY_Y*0.34, BODY_Z*0.36)))
 
-    # Layered flank scales overlap in staggered rows and follow the curved shoulder line.
+    # Dense overlapping scale rows follow the curled silhouette instead of a straight box ridge.
+    spine_path = [
+        (-88, 0, 18), (-75, 0, 38), (-52, 0, 51), (-24, 0, 56),
+        (8, 0, 49), (35, 0, 31), (52, 0, 6), (49, 0, -22),
+        (31, 0, -43), (5, 0, -53), (-23, 0, -48), (-45, 0, -30)
+    ]
+    for i, p in enumerate(spine_path):
+        t = i / max(1, len(spine_path)-1)
+        r = 15.5 - 7.0*t
+        armor.append(ball(r, 1.18, 1.0, .72).translate(p))
+        # Large raised dorsal scutes with alternating swept spikes.
+        plate = scale_plate(24-8*t, 17-5*t, 4.2).rotate(Axis.X, 90)
+        armor.append(plate.translate((p[0], 0, p[2]+r*.55)))
+        if i % 2 == 0 and i < 9:
+            spike = Cone(7.0-2.0*t, .7, 14-4*t,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
+            armor.append(spike.rotate(Axis.Y, 90).translate((p[0], 0, p[2]+r*.65)))
+
+    # Flank scales are arranged in diagonal overlapping bands on both sides of the curl.
     for side in (-1, 1):
-        for row in range(3):
-            z = BODY_Z * .23 - row * 10.5
-            for j, x in enumerate(range(int(-BODY_X*.31), int(BODY_X*.32), 14)):
-                width = 18 if row != 1 else 15
-                height = 12 if row != 2 else 10
-                plate = scale_plate(width, height, 3.8).rotate(Axis.X, 90)
-                plate = plate.rotate(Axis.Z, (j % 2 - 0.5) * 8)
-                armor.append(plate.translate((x, side*(BODY_Y/2 - 1.2), z)))
-        # Muscular, rounded shoulder caps merge visually into the leg roots.
-        armor.append(ball(19, 1.18, .98, .94).translate((-BODY_X*.30, side*(BODY_Y/2 - 1), -3)))
-        armor.append(ball(21, 1.20, .98, .90).translate((BODY_X*.30, side*(BODY_Y/2 - 1), -5)))
-        # Raised pectoral plates add an armored transition from chest to front legs.
-        chest = scale_plate(24, 18, 4.2).rotate(Axis.X, 90)
-        armor.append(chest.translate((-BODY_X*0.34, side*(BODY_Y/2 + 1.0), BODY_Z*0.12)))
+        for i, p in enumerate(spine_path[1:-1]):
+            x, _, z = p
+            for row in range(2):
+                scale = scale_plate(18-row*2, 12-row*1.5, 3.6).rotate(Axis.X, 90)
+                scale = scale.rotate(Axis.Y, -18 if z > 0 else 18)
+                armor.append(scale.translate((x-2*row, side*(BODY_Y*.43), z-row*9)))
+        # Shoulder armor visually connects the dragon shell to the functional leg roots.
+        armor.append(ball(19, 1.18, 1.0, .92).translate((-BODY_X*.30, side*(BODY_Y/2-1), -3)))
+        armor.append(ball(21, 1.20, 1.0, .90).translate((BODY_X*.30, side*(BODY_Y/2-1), -5)))
+        chest = scale_plate(27, 20, 4.2).rotate(Axis.X, 90)
+        armor.append(chest.translate((-BODY_X*.34, side*(BODY_Y/2+1), BODY_Z*.10)))
     return shell, panel, armor
 
 def make_head():
+    """Sculpted horned dragon head: long wedge muzzle, swept horns, layered brows and sensor eyes."""
     parts = []
-    # Overlapping ellipsoids give the head a more organic dragon silhouette.
-    skull = ball(31, 1.18, 1.02, 0.86).translate((-105, 0, 27))
-    brow = ball(22, 1.35, 1.02, 0.58).translate((-125, 0, 30))
-    muzzle = ball(24, 1.25, 0.88, 0.48).translate((-143, 0, 13))
-    lower_muzzle = ball(21, 1.22, 0.86, 0.25).translate((-143, 0, 2))
-    jaw = rb(43, 38, 7, 3).translate((-143, 0, -5))
-    parts += [brow, lower_muzzle]
-    parts += [skull, muzzle, jaw]
-    # Angular chin and layered cheek armor make the muzzle read more clearly as a dragon head.
-    chin = ball(17, 1.20, 0.92, 0.42).translate((-151, 0, -6))
-    parts.append(chin)
-    # Eye sockets and raised eye housings (camera windows are 16 mm openings).
+    # Tapered head silhouette, avoiding the stack-of-balls look of the previous draft.
+    skull = ball(27, 1.25, .92, .78).translate((-111, 0, 27))
+    cheek = ball(20, 1.18, 1.00, .66).translate((-128, 0, 17))
+    muzzle = beam_between((-124, 0, 22), (-164, 0, 9), 27, 17, 5)
+    lower_jaw = beam_between((-132, 0, 5), (-164, 0, 4), 25, 8, 3)
+    chin = ball(10, 1.45, 1.0, .55).translate((-157, 0, 1))
+    parts += [skull, cheek, muzzle, lower_jaw, chin]
+
+    # Two swept crown horns, built from overlapping tapered sections for a curved silhouette.
     for side in (-1, 1):
-        socket = ball(10, 1.0, 0.82, 0.82).translate((-119, side*25, 36))
-        rim = ball(14, 1.0, 0.88, 0.95).translate((-119, side*25, 36))
-        parts.append(rim.cut(socket))
-        parts.append(rb(29, 12, 9, 3).translate((-119, side*28, 47)))
-        horn = Cone(10, 1.4, 36, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        horn = horn.rotate(Axis.Y, -32).rotate(Axis.X, side*12).translate((-101, side*19, 49))
-        rear_horn = Cone(7, 1.2, 25, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        rear_horn = rear_horn.rotate(Axis.Y, 24).rotate(Axis.X, side*10).translate((-89, side*25, 48))
-        parts.append(rear_horn)
-        parts.append(horn)
-        # Cheek scales, stepped rearward so they read as armor rather than flat decoration.
+        horn_pts = [
+            (-108, side*15, 42), (-104, side*17, 55),
+            (-107, side*19, 69), (-116, side*20, 82),
+            (-128, side*20, 89)
+        ]
+        for a, b, r1, r2 in zip(horn_pts[:-1], horn_pts[1:], (9,7,5,3.4), (7,5,3.4,.7)):
+            seg = beam_between(a, b, r1+r2, r1+r2, 2)
+            parts.append(seg)
+        # Cheek plates sweep backward and downward like the reference's layered scales.
         for i in range(4):
-            cheek = scale_plate(20-i*2.5, 14-i*1.8, 3.6).rotate(Axis.X, 90)
-            parts.append(cheek.translate((-132+i*7, side*(29+i*1.8), 14+i*6)))
-        brow_ridge = beam_between((-132, side*24, 43), (-111, side*25, 45), 5.0, 5.0, 1.8)
-        parts.append(brow_ridge)
-    # Nose bridge and nostril rims
-    parts.append(rb(18, 35, 13, 5).translate((-164, 0, 17)))
+            plate = scale_plate(22-i*3, 15-i*2, 3.5).rotate(Axis.X, 90)
+            parts.append(plate.translate((-132+i*7, side*(23+i*1.5), 13+i*4)))
+        # Deep eye socket with a raised rim; sized as a sensor window, not a painted eye.
+        eye = ball(8.5, 1.0, .68, .68).translate((-120, side*24, 31))
+        rim = ball(12, 1.0, .8, .8).translate((-120, side*24, 31))
+        parts.append(rim.cut(eye))
+        brow = beam_between((-133, side*22, 39), (-112, side*24, 42), 7, 6, 2)
+        parts.append(brow)
+        # Short rear horns/spikes break up the crown silhouette.
+        for i in range(3):
+            base = (-96+i*8, side*(20+i*2), 38-i*3)
+            tip = (-86+i*8, side*(25+i*2), 50-i*3)
+            parts.append(beam_between(base, tip, 8-i, 7-i*.7, 1.5))
+    # Nose ridge and nostril bosses.
+    parts.append(beam_between((-151, 0, 18), (-169, 0, 12), 9, 8, 2))
     for side in (-1, 1):
-        parts.append(ball(3, 1, 1, .7).translate((-171, side*10, 20)))
+        parts.append(ball(2.5, 1, .7, .7).translate((-169, side*8, 13)))
     return parts
 
 def make_neck():
@@ -215,38 +218,33 @@ def make_wing(side):
     return Compound([membrane, shoulder] + ribs)
 
 def make_tail():
-    """Small articulated, laterally-curving dragon tail with overlapping tapered armor."""
+    """Curled, segmented dragon tail with overlapping armor and a split blade-like tip."""
     parts = []
-    lengths = [18, 16, 14, 12, 10, 9, 8, 7, 6, 5]
-    radii =   [14, 12, 10.5, 9, 7.8, 6.7, 5.7, 4.8, 3.9, 3.0]
-    # The centreline bends sideways; each segment is a separate printable piece.
-    # Adjacent ball joints provide visible articulation and allow yaw-link prototypes.
-    x = BODY_X * .34
-    previous = None
-    for i, (length, radius) in enumerate(zip(lengths, radii)):
-        angle = math.radians(22 * math.sin(i * 0.62))
-        dx = math.cos(angle) * length
-        dy = math.sin(angle) * length * 0.78
-        cx = x + dx / 2
-        cy = (previous[1] if previous else 0) + dy / 2
-        cz = -2 + 1.8 * math.sin(i * .45)
-        seg = rb(length, radius*1.7, radius*1.55, min(3, radius/3))
-        seg = seg.rotate(Axis.Z, math.degrees(angle)).translate((cx, cy, cz))
-        parts.append(seg)
-        if i > 0:
-            joint = ball(radius*.66).translate((x, previous[1], cz))
-            parts.append(joint)
-        ridge = Cone(radius*.62, 1.0, max(5, radius*1.2),
-                     align=(Align.CENTER, Align.CENTER, Align.MIN))
-        parts.append(ridge.translate((cx, cy, cz + radius*.58)))
-        # A small top scale on each segment gives a plated dragon-back silhouette.
+    # Centreline follows a broad curl down and back toward the front, like the reference.
+    path = [
+        (58, 0, -5), (77, 0, -16), (88, 0, -34), (85, 0, -53),
+        (70, 0, -69), (48, 0, -80), (24, 0, -84), (0, 0, -78),
+        (-22, 0, -63), (-38, 0, -44), (-47, 0, -25)
+    ]
+    radii = [16, 15, 14, 12.5, 11, 9.5, 8, 6.8, 5.6, 4.4]
+    for i, (a, b, radius) in enumerate(zip(path[:-1], path[1:], radii)):
+        # Rounded link plus a tapered dorsal plate gives the tail a continuous plated profile.
+        parts.append(beam_between(a, b, radius*1.65, radius*1.45, min(4, radius*.25)))
+        joint = ball(radius*.78, 1.0, .88, .9).translate(b)
+        parts.append(joint)
+        tangent = Vector(b) - Vector(a)
+        plate = scale_plate(radius*1.7, radius*1.15, 3.0)
+        plate = plate.rotate(Axis.X, 90).translate(((a[0]+b[0])/2, 0, (a[2]+b[2])/2+radius*.55))
+        parts.append(plate)
         if i < 7:
-            parts.append(scale_plate(radius*1.55, radius*.85, 2.4)
-                         .rotate(Axis.X, 90).translate((cx, cy, cz + radius*.55)))
-        x += dx
-        previous = (x, cy)
-    tip = Cone(8, 0.6, 20, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    parts.append(tip.rotate(Axis.Y, 90).rotate(Axis.Z, 12).translate((x+5, previous[1], 3)))
+            spike = Cone(radius*.48, .8, radius*1.15,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
+            parts.append(spike.rotate(Axis.Y, 90).translate((a[0], 0, a[2]+radius*.5)))
+    # Flattened forked blade tip, oriented diagonally like the reference tail fin.
+    tip = beam_between((-47, 0, -25), (-68, 0, -10), 15, 5, 2)
+    fork_a = beam_between((-65, 0, -12), (-78, 0, -1), 8, 4, 1.5)
+    fork_b = beam_between((-65, 0, -12), (-76, 0, -24), 8, 4, 1.5)
+    parts += [tip, fork_a, fork_b]
     return parts
 
 def make_legs():
