@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""XZORT Rescue Dragon quadruped CAD v2 — dimensions in mm.
+"""XZORT Rescue Dragon quadruped CAD v3 — dragon silhouette redesign, dimensions in mm.
 
-Reference styling: dragon-1.png (horned head, layered scales, wings, segmented tail).
+Dragon silhouette priority: sculpted head, swept horns, broad bat wings, dorsal spines, layered armor scales, segmented tail.
 Mechanical geometry remains a four-legged, 12-servo rescue robot. No global scaling:
 servo envelopes and link lengths stay at their authored dimensions.
 """
@@ -81,18 +81,25 @@ def make_body():
 
 def make_head():
     parts = []
-    skull = rb(68, 62, 48, 16).translate((-105, 0, 27))
-    muzzle = rb(48, 44, 25, 9).translate((-145, 0, 13))
-    jaw = rb(48, 42, 8, 3).translate((-143, 0, -3))
+    # Overlapping ellipsoids give the head a more organic dragon silhouette.
+    skull = ball(31, 1.18, 1.02, 0.86).translate((-105, 0, 27))
+    brow = ball(22, 1.35, 1.02, 0.58).translate((-125, 0, 30))
+    muzzle = ball(24, 1.25, 0.88, 0.48).translate((-143, 0, 13))
+    lower_muzzle = ball(21, 1.22, 0.86, 0.25).translate((-143, 0, 2))
+    jaw = rb(43, 38, 7, 3).translate((-143, 0, -5))
+    parts += [brow, lower_muzzle]
     parts += [skull, muzzle, jaw]
     # Eye sockets and raised eye housings (camera windows are 16 mm openings).
     for side in (-1, 1):
-        socket = ball(12, 1.0, 0.78, 0.85).translate((-116, side*27, 35))
-        rim = ball(15, 1.0, 0.82, 0.9).translate((-116, side*27, 35))
+        socket = ball(10, 1.0, 0.82, 0.82).translate((-119, side*25, 36))
+        rim = ball(14, 1.0, 0.88, 0.95).translate((-119, side*25, 36))
         parts.append(rim.cut(socket))
         parts.append(rb(29, 12, 9, 3).translate((-119, side*28, 47)))
-        horn = Cone(9, 2.2, 29, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        horn = horn.rotate(Axis.Y, -18).translate((-99, side*22, 50))
+        horn = Cone(10, 1.4, 36, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        horn = horn.rotate(Axis.Y, -32).rotate(Axis.X, side*12).translate((-101, side*19, 49))
+        rear_horn = Cone(7, 1.2, 25, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        rear_horn = rear_horn.rotate(Axis.Y, 24).rotate(Axis.X, side*10).translate((-89, side*25, 48))
+        parts.append(rear_horn)
         parts.append(horn)
         # Cheek scales
         for i in range(3):
@@ -105,29 +112,31 @@ def make_head():
 
 def make_neck():
     parts = []
-    for i, x in enumerate((-87, -76, -65)):
-        ring = Cylinder(22-i*2, 10, rotation=(0,90,0),
+    for i, x in enumerate((-91, -79, -67, -55)):
+        ring = Cylinder(24-i*2, 9, rotation=(0,90,0),
                         align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x,0,12))
-        collar = Cylinder(27-i*2, 3, rotation=(0,90,0),
+        collar = Cylinder(29-i*2, 3, rotation=(0,90,0),
                           align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x,0,12))
         parts.append(ring.fuse(collar))
     return parts
 
 def make_wing(side):
     # Decorative dragon-like folded wing, thin and removable; stays inside 350 mm envelope.
+    # Broad swept bat wing with several scalloped fingers, matching the reference dragon.
     pts = [
-        (0, side*38, 22), (0, side*110, 67), (0, side*91, 79),
-        (0, side*73, 61), (0, side*58, 73), (0, side*45, 42),
-        (0, side*38, 22)
+        (0, side*34, 24), (0, side*70, 42), (0, side*104, 91),
+        (0, side*101, 65), (0, side*126, 79), (0, side*113, 48),
+        (0, side*133, 48), (0, side*105, 28), (0, side*79, 14),
+        (0, side*55, 12), (0, side*34, 24)
     ]
     membrane = extrude(Face(Polyline(pts)), amount=3.2, dir=(1,0,0)).translate((-18,0,0))
-    shoulder = ball(13, 1.2, 1.0, .8).translate((-15, side*42, 28))
+    shoulder = ball(16, 1.2, 1.0, .8).translate((-15, side*42, 28))
     return Compound([membrane, shoulder])
 
 def make_tail():
     parts = []
-    lengths = [16, 14, 12, 10, 8, 7, 6, 5]
-    radii = [14, 12, 10, 8.5, 7, 5.8, 4.8, 3.8]
+    lengths = [18, 16, 14, 12, 10, 9, 8, 7, 6]
+    radii = [15, 13, 11, 9.5, 8, 6.8, 5.8, 4.8, 3.8]
     x = 82
     z = -1
     for i, (length, radius) in enumerate(zip(lengths, radii)):
@@ -141,7 +150,10 @@ def make_tail():
         ridge = Cone(radius*.65, 1.2, 8, align=(Align.CENTER, Align.CENTER, Align.MIN))
         parts.append(ridge.translate((x+length*.55, 0, z+radius+i*1.3)))
         x += length
-    parts.append(ball(5).translate((x+2, 0, z+10)))
+    # Arrow/diamond tip for a recognizably draconic tail.
+    tip = Cone(10, 0.8, 24, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    tip = tip.rotate(Axis.Y, 90).translate((x+8, 0, z+8))
+    parts.append(tip)
     return parts
 
 def make_legs():
@@ -207,7 +219,7 @@ def main():
     export_step(Compound(all_shapes), str(OUT / "REF" / "full_assembly.step"))
     manifest = [
         "XZORT RESCUE DRAGON QUADRUPED v2",
-        "Reference style: dragon-1.png — horns, raised eyes, layered scales, folded wings, segmented tail",
+        "Reference style: dragon-1.png — sculpted head, swept double horns, broad bat wings, layered scales, segmented tail",
         "Mechanical layout: four legs / 12 servo housings",
         "No global scaling. DS3225 envelope remains 41 x 21 x 41 mm.",
         "Link centerline targets: coxa 40 mm, femur 75 mm, tibia 85 mm.",
