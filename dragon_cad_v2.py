@@ -75,14 +75,16 @@ def scale_plate(width, height, thickness=3):
     return extrude(Face(wire), amount=thickness, dir=(0, 1, 0))
 
 def make_body():
-    # The cavity opens through the underside; the removable panel closes it.
-    shell = rb(BODY_X, BODY_Y, BODY_Z, 10)
+    """Rounded dragon torso with a concealed electronics bay and screw-fastened belly hatch."""
+    # The structural core is intentionally hidden under sculpted armor.  The underside
+    # cavity houses the ESP32/PCA9685 tray and the battery bay; no electronics are exposed
+    # on the dragon's back.
+    shell = rb(BODY_X, BODY_Y, BODY_Z, min(14, BODY_Z / 4))
     cavity_center_z = -BODY_Z / 2 + CAVITY_Z / 2
-    cavity = rb(CAVITY_X, CAVITY_Y, CAVITY_Z, 3).translate((0, 0, cavity_center_z))
+    cavity = rb(CAVITY_X, CAVITY_Y, CAVITY_Z, 4).translate((0, 0, cavity_center_z))
     shell = shell.cut(cavity)
 
-    # Four roof-connected bosses support M3 self-tapping screws for the belly panel.
-    # Their pilot holes align with the panel clearance holes; bosses are part of the shell.
+    # Internal standoffs for the removable lower hatch (M3 pilot holes).
     panel_hole_x, panel_hole_y = PANEL_X * 0.38, PANEL_Y * 0.30
     boss_z = -BODY_ROOF / 2 + 1.0
     for x in (-panel_hole_x, panel_hole_x):
@@ -100,17 +102,31 @@ def make_body():
             panel = panel.cut(Cylinder(1.7, PANEL_THICK + 2,
                 align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, panel_z)))
 
-    # Armor is positioned from the computed shell envelope, not a fixed 180x100 body.
-    scales = []
-    for x in range(int(-BODY_X * 0.34), int(BODY_X * 0.35), 20):
-        plate = scale_plate(22, 18, 3).rotate(Axis.X, 90).translate((x, 0, BODY_Z / 2 - 2))
-        scales.append(plate)
+    armor = []
+    # Raised spine: overlapping scales follow the back instead of looking like a flat strip.
+    for i, x in enumerate(range(int(-BODY_X * .34), int(BODY_X * .35), 13)):
+        t = abs(x) / max(BODY_X * .35, 1)
+        plate = scale_plate(21 - 4*t, 17 - 3*t, 3.2)
+        armor.append(plate.rotate(Axis.X, 90).translate((x, 0, BODY_Z/2 - 1)))
+        if i % 2 == 0:
+            spine = Cone(5.5, 1.0, 13, align=(Align.CENTER, Align.CENTER, Align.MIN))
+            armor.append(spine.rotate(Axis.Y, 90).translate((x, 0, BODY_Z/2 + 5)))
+
+    # Side armor overlaps like scales and wraps down over the torso flanks.
     for side in (-1, 1):
-        for row in range(2):
-            for x in range(int(-BODY_X * 0.34), int(BODY_X * 0.35), 22):
-                plate = scale_plate(21, 15, 3).rotate(Axis.X, 90)
-                scales.append(plate.translate((x, side * (BODY_Y / 2 - 1), -8 + row * 18)))
-    return shell, panel, scales
+        for row in range(3):
+            z = BODY_Z * .20 - row * 12
+            for x in range(int(-BODY_X*.31), int(BODY_X*.32), 16):
+                width = 19 if row != 1 else 16
+                plate = scale_plate(width, 13, 3.4).rotate(Axis.X, 90)
+                armor.append(plate.translate((x, side*(BODY_Y/2 - 2), z)))
+        # Rounded shoulder armor visually blends the torso into each leg root.
+        armor.append(ball(17, 1.1, .9, .85).translate((-BODY_X*.30, side*(BODY_Y/2 - 1), -3)))
+        armor.append(ball(19, 1.15, .9, .8).translate((BODY_X*.30, side*(BODY_Y/2 - 1), -5)))
+
+    # A raised central dorsal plate hides the flat structural core from normal view.
+    armor.append(ball(1, 1, 1, 1).translate((0, 0, BODY_Z/2)))
+    return shell, panel, armor
 
 def make_head():
     parts = []
@@ -154,39 +170,53 @@ def make_neck():
     return parts
 
 def make_wing(side):
-    # Decorative dragon-like folded wing, thin and removable; stays inside 350 mm envelope.
-    # Broad swept bat wing with several scalloped fingers, matching the reference dragon.
+    """Swept, scalloped wing: a shaped membrane with raised ribs, not a flat rectangle."""
     pts = [
-        (0, side*34, 24), (0, side*70, 42), (0, side*104, 91),
-        (0, side*101, 65), (0, side*126, 79), (0, side*113, 48),
-        (0, side*133, 48), (0, side*105, 28), (0, side*79, 14),
-        (0, side*55, 12), (0, side*34, 24)
+        (0, side*30, 22), (0, side*51, 31), (0, side*79, 72),
+        (0, side*76, 48), (0, side*100, 60), (0, side*91, 35),
+        (0, side*116, 37), (0, side*91, 17), (0, side*69, 9),
+        (0, side*48, 10), (0, side*30, 22)
     ]
-    membrane = extrude(Face(Polyline(pts)), amount=3.2, dir=(1,0,0)).translate((-18,0,0))
-    shoulder = ball(16, 1.2, 1.0, .8).translate((-15, side*42, 28))
-    return Compound([membrane, shoulder])
+    membrane = extrude(Face(Polyline(pts, close=True)), amount=4.2, dir=(1,0,0)).translate((-17,0,0))
+    shoulder = ball(15, 1.25, 1.0, .85).translate((-13, side*39, 25))
+    ribs = []
+    for end in [(0, side*51, 31), (0, side*79, 72), (0, side*100, 60), (0, side*116, 37)]:
+        ribs.append(beam_between((-12, side*38, 26), (-12, end[1], end[2]), 3.2, 3.0, 1.0))
+    return Compound([membrane, shoulder] + ribs)
 
 def make_tail():
+    """Small articulated, laterally-curving dragon tail with overlapping tapered armor."""
     parts = []
-    lengths = [13, 11, 9, 8, 7, 6, 5, 4, 3]
-    radii = [13, 11, 9.5, 8, 6.8, 5.8, 4.8, 3.8, 2.8]
-    x = 65
-    z = -1
+    lengths = [18, 16, 14, 12, 10, 9, 8, 7, 6, 5]
+    radii =   [14, 12, 10.5, 9, 7.8, 6.7, 5.7, 4.8, 3.9, 3.0]
+    # The centreline bends sideways; each segment is a separate printable piece.
+    # Adjacent ball joints provide visible articulation and allow yaw-link prototypes.
+    x = BODY_X * .34
+    previous = None
     for i, (length, radius) in enumerate(zip(lengths, radii)):
-        seg = Cylinder(radius, length, rotation=(0,90,0),
-                       align=(Align.CENTER, Align.CENTER, Align.CENTER))
-        seg = seg.fuse(Cylinder(radius+3, 3, rotation=(0,90,0),
-                                align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((length*.25,0,0)))
-        seg = seg.translate((x+length/2, 0, z+i*1.3))
+        angle = math.radians(22 * math.sin(i * 0.62))
+        dx = math.cos(angle) * length
+        dy = math.sin(angle) * length * 0.78
+        cx = x + dx / 2
+        cy = (previous[1] if previous else 0) + dy / 2
+        cz = -2 + 1.8 * math.sin(i * .45)
+        seg = rb(length, radius*1.7, radius*1.55, min(3, radius/3))
+        seg = seg.rotate(Axis.Z, math.degrees(angle)).translate((cx, cy, cz))
         parts.append(seg)
-        # Small dorsal ridge per tail segment.
-        ridge = Cone(radius*.65, 1.2, 8, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        parts.append(ridge.translate((x+length*.55, 0, z+radius+i*1.3)))
-        x += length
-    # Arrow/diamond tip for a recognizably draconic tail.
-    tip = Cone(10, 0.8, 24, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    tip = tip.rotate(Axis.Y, 90).translate((x+8, 0, z+8))
-    parts.append(tip)
+        if i > 0:
+            joint = ball(radius*.66).translate((x, previous[1], cz))
+            parts.append(joint)
+        ridge = Cone(radius*.62, 1.0, max(5, radius*1.2),
+                     align=(Align.CENTER, Align.CENTER, Align.MIN))
+        parts.append(ridge.translate((cx, cy, cz + radius*.58)))
+        # A small top scale on each segment gives a plated dragon-back silhouette.
+        if i < 7:
+            parts.append(scale_plate(radius*1.55, radius*.85, 2.4)
+                         .rotate(Axis.X, 90).translate((cx, cy, cz + radius*.55)))
+        x += dx
+        previous = (x, cy)
+    tip = Cone(8, 0.6, 20, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    parts.append(tip.rotate(Axis.Y, 90).rotate(Axis.Z, 12).translate((x+5, previous[1], 3)))
     return parts
 
 def make_legs():
@@ -254,13 +284,13 @@ def main():
     export_step(Compound(all_shapes), str(OUT / "REF" / "full_assembly.step"))
     manifest = [
         "XZORT RESCUE DRAGON QUADRUPED v2",
-        "Reference style: dragon-1.png — sculpted head, swept double horns, broad bat wings, layered scales, segmented tail",
+        "Reference style: dragon-1.png — curled plated body, sculpted horned head, swept scalloped wings and curved segmented tail",
         "Mechanical layout: four legs / 12 servo housings",
         "No global scaling. DS3225 envelope remains 41 x 21 x 41 mm.",
         f"Parametric body: {BODY_X:.1f} x {BODY_Y:.1f} x {BODY_Z:.1f} mm; cavity {CAVITY_X:.1f} x {CAVITY_Y:.1f} mm.",
         "Body dimensions derive from electronics tray clearance and leg-servo mounting envelope.",
         "Link centerline targets: coxa 45 mm, femur 75 mm, tibia 105 mm (matches AI_CONTEXT.md / firmware IK).",
-        "Belly panel: 4 x M3 clearance holes aligned to 4 roof-connected 2.6 mm pilot bosses.",
+        "Service hatch: 4 x M3 clearance holes aligned to internal pilot bosses; electronics and battery remain inside the torso.",
         f"Bounding box: X={size[0]:.2f}, Y={size[1]:.2f}, Z={size[2]:.2f} mm",
         f"Hard envelope limit: {MAX_MM:.1f} mm",
         "NOTE: STEP/STL are design prototypes. Validate servo horn geometry, fasteners, wire routing, clearances and physical gait before printing the full set.",
