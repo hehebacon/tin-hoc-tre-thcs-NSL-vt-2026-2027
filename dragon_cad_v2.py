@@ -16,8 +16,8 @@ MAX_MM = 350.0
 SERVO_X, SERVO_Y, SERVO_Z = 41.0, 21.0, 41.0  # DS3225 envelope + small CAD allowance
 
 # Parametric belly: edit component targets and the body/cavity recalculate.
-TRAY_X, TRAY_Y, TRAY_Z = 112.0, 56.0, 4.0
-ELECTRONICS_CLEARANCE = 3.0
+TRAY_X, TRAY_Y, TRAY_Z = 122.0, 62.0, 4.0
+ELECTRONICS_CLEARANCE = 5.0
 BODY_WALL = 4.0
 BODY_FLOOR = 5.0
 BODY_ROOF = 12.0
