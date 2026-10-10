@@ -5,12 +5,13 @@
 2. BODY UPPER: removable armored lid, side scale plates, dorsal armor mounting pads.
 3. HEAD MODULE: tapered skull, brow/horn features, cheek armor, front sensor aperture, rear mounting flange.
 4. DORSAL ARMOR: one carrier with central and lateral spike rows; fastener locations along the carrier.
-5. TAIL: five serviceable links; each link can be printed separately, then assembled as a tail module.
-6. LEGS: coxa housing plus coxa/femur/tibia armor shells. Armor must not obstruct servo horns or joint travel.
-7. ELECTRONICS TRAY: removable internal tray for controller, power distribution and sensors.
+5. DORSAL SPIKES: center and swept side rows are integrated into the upper-body CAD source; regenerate and inspect the STL before printing.
+6. TAIL: five serviceable links; each link can be printed separately, then assembled as a tail module.
+7. LEGS: coxa housing plus coxa/femur/tibia armor shells. Armor must not obstruct servo horns or joint travel.
+8. ELECTRONICS TRAY: removable internal tray for controller, power distribution and sensors.
 
 ## Critical dimensions currently encoded
-- Main body envelope: 180 x 90 x 60 mm nominal.
+- Main body envelope: 180 x 84 x 60 mm nominal (refined compact body).
 - Battery cavity target: 112 x 42 x 28 mm.
 - Leg segment design parameters: coxa 40 mm, femur 75 mm, tibia 85 mm.
 - Nominal M3 clearance: 3.2 mm.
