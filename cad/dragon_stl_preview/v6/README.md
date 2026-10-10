@@ -12,7 +12,7 @@ Branch: `feat/dragon-shell-35cm`
 - `dragon_v6_parametric_reference.py` — starting parameter/reference architecture for the next editable CAD pass.
 
 ## Important status
-This is an early V6 modular geometry pass, **not a verified final print release**. The current meshes are generated concept geometry and may contain intersecting shells. Servo mounting holes, real servo envelopes, screw inserts, camera recesses, battery/electronics cavities, watertight Boolean unions, clearances, support orientation, and total assembly envelope have not been fully validated. Do not print functional/load-bearing parts before mesh repair and fit checks.
+The V6 CAD source has been refined: the body is narrower (180 x 84 x 60 mm) and dorsal center/side spikes are now modeled directly into the upper-body source. The STL previews have not yet been regenerated from this source, so this is **not a verified final print release**. The current meshes are generated concept geometry and may contain intersecting shells. Servo mounting holes, real servo envelopes, screw inserts, camera recesses, battery/electronics cavities, watertight Boolean unions, clearances, support orientation, and total assembly envelope have not been fully validated. Do not print functional/load-bearing parts before mesh repair and fit checks.
 
 ## Intended final module split
 1. Head complete (single print file)
