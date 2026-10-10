@@ -158,6 +158,7 @@ def make_tail():
 
 def make_legs():
     groups = {name: [] for name in ("FL_leg", "FR_leg", "RL_leg", "RR_leg")}
+    # Keep internal leg labels (FL/FR/RL/RR) mapped to printable group names.
     for name, sx, sy in (("FL",-1,-1), ("FR",-1,1), ("RL",1,-1), ("RR",1,1)):
         hip = (sx*50, sy*34, -7)
         # 40 mm coxa, 75 mm femur, 85 mm tibia. These are physical lengths,
@@ -167,16 +168,16 @@ def make_legs():
         foot_joint = (femur[0]+sx*22, femur[1]+sy*14, femur[2]-80.8)
         # Servo housings at all three axes; actual mounting details are separate follow-up work.
         for p in (hip, coxa, femur):
-            groups[name].append(rb(SERVO_X, SERVO_Y, SERVO_Z, 3).translate(p))
-            groups[name].append(Cylinder(6, 4, rotation=(0,90,0),
+            groups[name + "_leg"].append(rb(SERVO_X, SERVO_Y, SERVO_Z, 3).translate(p))
+            groups[name + "_leg"].append(Cylinder(6, 4, rotation=(0,90,0),
                 align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((p[0], p[1], p[2]+SERVO_Z/2)))
-        groups[name].append(beam_between(hip, coxa, 28, 24, 3))
-        groups[name].append(beam_between(coxa, femur, 25, 22, 3))
-        groups[name].append(beam_between(femur, foot_joint, 22, 18, 3))
+        groups[name + "_leg"].append(beam_between(hip, coxa, 28, 24, 3))
+        groups[name + "_leg"].append(beam_between(coxa, femur, 25, 22, 3))
+        groups[name + "_leg"].append(beam_between(femur, foot_joint, 22, 18, 3))
         foot = rb(36, 26, 10, 4).translate((foot_joint[0]+sx*3, foot_joint[1]+sy*2, foot_joint[2]-5))
         for j in (-1,0,1):
             foot = foot.fuse(rb(17, 5, 5, 2).translate((foot_joint[0]+sx*12, foot_joint[1]+sy*2+j*6, foot_joint[2]-8)))
-        groups[name].append(foot)
+        groups[name + "_leg"].append(foot)
     return groups
 
 def bounds(shapes):
