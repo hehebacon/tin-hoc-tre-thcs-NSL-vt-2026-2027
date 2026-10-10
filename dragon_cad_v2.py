@@ -15,6 +15,23 @@ OUT = Path(__import__("os").environ.get("XZORT_OUT", ROOT / "out"))
 MAX_MM = 350.0
 SERVO_X, SERVO_Y, SERVO_Z = 41.0, 21.0, 41.0  # DS3225 envelope + small CAD allowance
 
+# Parametric belly: edit component targets and the body/cavity recalculate.
+TRAY_X, TRAY_Y, TRAY_Z = 112.0, 56.0, 4.0
+ELECTRONICS_CLEARANCE = 3.0
+BODY_WALL = 4.0
+BODY_FLOOR = 5.0
+BODY_ROOF = 12.0
+LEG_MOUNT_X, LEG_MOUNT_Y = 50.0, 34.0
+PANEL_THICK = 4.0
+
+CAVITY_X = TRAY_X + 2 * ELECTRONICS_CLEARANCE
+CAVITY_Y = TRAY_Y + 2 * ELECTRONICS_CLEARANCE
+BODY_X = max(CAVITY_X + 2 * BODY_WALL, 2 * (LEG_MOUNT_X + SERVO_X / 2 + 3.0))
+BODY_Y = max(CAVITY_Y + 2 * BODY_WALL, 2 * (LEG_MOUNT_Y + SERVO_Y / 2 + 3.0))
+BODY_Z = BODY_FLOOR + BODY_ROOF + 35.0
+CAVITY_Z = BODY_Z - BODY_FLOOR + 1.0
+PANEL_X, PANEL_Y = CAVITY_X + 12.0, CAVITY_Y + 12.0
+
 if OUT.exists():
     for p in OUT.rglob("*"):
         if p.is_file() and p.suffix.lower() in {".stl", ".step", ".stp"}:
@@ -58,25 +75,29 @@ def scale_plate(width, height, thickness=3):
     return extrude(Face(wire), amount=thickness, dir=(0, 1, 0))
 
 def make_body():
-    shell = rb(180, 100, 60, 14)
-    cavity = rb(118, 62, 34, 8).translate((5, 0, -2))
+    # The cavity opens through the underside; the removable panel closes it.
+    shell = rb(BODY_X, BODY_Y, BODY_Z, 10)
+    cavity_center_z = -BODY_Z / 2 + CAVITY_Z / 2
+    cavity = rb(CAVITY_X, CAVITY_Y, CAVITY_Z, 3).translate((0, 0, cavity_center_z))
     shell = shell.cut(cavity)
-    # Removable lower panel and mounting bosses.
-    panel = rb(132, 70, 5, 3).translate((0, 0, -29))
-    for x in (-52, -18, 18, 52):
-        for y in (-27, 27):
-            panel = panel.cut(Cylinder(1.7, 8, align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, -29)))
-    # Dorsal scale plates, kept separate as grouped printable detail.
+
+    panel_z = -BODY_Z / 2 - PANEL_THICK / 2 + 0.5
+    panel = rb(PANEL_X, PANEL_Y, PANEL_THICK, 3).translate((0, 0, panel_z))
+    for x in (-PANEL_X * 0.42, PANEL_X * 0.42):
+        for y in (-PANEL_Y * 0.36, PANEL_Y * 0.36):
+            panel = panel.cut(Cylinder(1.7, PANEL_THICK + 2,
+                align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, panel_z)))
+
+    # Armor is positioned from the computed shell envelope, not a fixed 180x100 body.
     scales = []
-    for i, x in enumerate(range(-58, 63, 20)):
-        plate = scale_plate(22, 18, 3).rotate(Axis.X, 90).translate((x, 0, 31))
+    for x in range(int(-BODY_X * 0.34), int(BODY_X * 0.35), 20):
+        plate = scale_plate(22, 18, 3).rotate(Axis.X, 90).translate((x, 0, BODY_Z / 2 - 2))
         scales.append(plate)
-    # Side armor rows
     for side in (-1, 1):
         for row in range(2):
-            for i, x in enumerate(range(-55, 56, 22)):
+            for x in range(int(-BODY_X * 0.34), int(BODY_X * 0.35), 22):
                 plate = scale_plate(21, 15, 3).rotate(Axis.X, 90)
-                scales.append(plate.translate((x, side*(50+row*2), -10+row*20)))
+                scales.append(plate.translate((x, side * (BODY_Y / 2 - 1), -8 + row * 18)))
     return shell, panel, scales
 
 def make_head():
@@ -205,7 +226,7 @@ def main():
     groups = {
         "body": [body] + scales,
         "head": head + neck,
-        "electronics": [panel, rb(112,56,4,2).translate((4,0,14))], # removable tray + board plate
+        "electronics": [panel, rb(TRAY_X, TRAY_Y, TRAY_Z, 2).translate((0, 0, 5))], # tray follows parametric cavity
         "wings": wings,
         "tail": tail,
         **legs,
@@ -223,6 +244,8 @@ def main():
         "Reference style: dragon-1.png — sculpted head, swept double horns, broad bat wings, layered scales, segmented tail",
         "Mechanical layout: four legs / 12 servo housings",
         "No global scaling. DS3225 envelope remains 41 x 21 x 41 mm.",
+        f"Parametric body: {BODY_X:.1f} x {BODY_Y:.1f} x {BODY_Z:.1f} mm; cavity {CAVITY_X:.1f} x {CAVITY_Y:.1f} mm.",
+        "Body dimensions derive from electronics tray clearance and leg-servo mounting envelope.",
         "Link centerline targets: coxa 40 mm, femur 75 mm, tibia 85 mm.",
         f"Bounding box: X={size[0]:.2f}, Y={size[1]:.2f}, Z={size[2]:.2f} mm",
         f"Hard envelope limit: {MAX_MM:.1f} mm",
