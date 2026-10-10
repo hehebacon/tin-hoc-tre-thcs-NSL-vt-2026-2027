@@ -46,8 +46,14 @@ git pull --ff-only origin "$BRANCH" || die "Local branch cannot fast-forward. Yo
 
 # Restore user changes after updating. If conflicts occur, stop rather than overwrite them.
 if [[ "$STASHED" -eq 1 ]]; then
-  git stash pop || die "Stash restore had conflicts. Your stash is retained; resolve the conflicts before rerunning."
-  STASHED=0
+  if git stash pop; then
+    STASHED=0
+  elif [[ -z "$(git diff --name-only --diff-filter=U)" ]]; then
+    printf "\n[WARN] Stash remains as a safety copy; no merge conflicts found, continuing.\n"
+    STASHED=0
+  else
+    die "Real merge conflicts found. Your stash is retained; no files were discarded."
+  fi
 fi
 
 [[ -f "$CAD_FILE" ]] || die "CAD source is missing after update."
