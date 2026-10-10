@@ -1,0 +1,31 @@
+# XZORT Dragon V6 — assembly and print plan
+
+## Assembly hierarchy
+1. BODY LOWER: battery bay, electronics mounting posts, four leg hardpoint pads, split-line screw holes.
+2. BODY UPPER: removable armored lid, side scale plates, dorsal armor mounting pads.
+3. HEAD MODULE: tapered skull, brow/horn features, cheek armor, front sensor aperture, rear mounting flange.
+4. DORSAL ARMOR: one carrier with central and lateral spike rows; fastener locations along the carrier.
+5. DORSAL SPIKES: center and swept side rows are integrated into the upper-body CAD source; regenerate and inspect the STL before printing.
+6. TAIL: five serviceable links; each link can be printed separately, then assembled as a tail module.
+7. LEGS: coxa housing plus coxa/femur/tibia armor shells. Armor must not obstruct servo horns or joint travel.
+8. ELECTRONICS TRAY: removable internal tray for controller, power distribution and sensors.
+
+## Critical dimensions currently encoded
+- Main body envelope: 180 x 84 x 60 mm nominal (refined compact body).
+- Battery pack target: 105 x 35 x 25 mm; current lower-shell bay cut is 120 x 50 x 27 mm, with a 3 mm floor. Confirm actual pack, insulation, retainer and wiring fit; 28 mm internal depth is not achieved in the current 30 mm lower shell.
+- Leg segment design parameters: coxa 40 mm, femur 75 mm, tibia 85 mm.
+- Nominal M3 clearance: 3.2 mm.
+- Bearing reference: 688ZZ, OD 16 / ID 8 / width 5 mm (press fit must be calibrated).
+
+## Before calling V6 final
+- [ ] Run `dragon_v6_build.py` in a build123d environment and ensure all exports succeed.
+- [ ] Run `python check_stl_meshes.py out_v6`; repair every non-watertight, inconsistent-winding or zero-volume mesh before printing.
+- [ ] Confirm the complete robot stays inside the 350 mm competition envelope; tail and leg sweep can exceed static body bounds.
+- [ ] Measure actual DS3225 servo bodies, horns, screws, wiring bend radius and connector access.
+- [ ] Validate all M3 screw paths, insert depths, head clearance, and upper/lower body alignment.
+- [ ] Verify battery fits with insulation and retainer; verify electronics tray and cable routing.
+- [ ] Run joint range/collision checks for all 12 servo axes.
+- [ ] Print small tolerance coupons before committing to large parts.
+- [ ] Assemble a low-cost prototype before printing the final cosmetic armor.
+
+**Status:** design-source and preview package; not yet mechanically verified final release. Some visual meshes in this directory predate the parametric source. Re-export from `dragon_v6_build.py` before relying on them for fabrication.

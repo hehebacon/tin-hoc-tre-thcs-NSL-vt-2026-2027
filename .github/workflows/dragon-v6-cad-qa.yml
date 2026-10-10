@@ -1,0 +1,29 @@
+name: Dragon V6 CAD QA
+on:
+  push:
+    paths:
+      - "cad/dragon_stl_preview/v6/**"
+      - ".github/workflows/dragon-v6-cad-qa.yml"
+  pull_request:
+    paths:
+      - "cad/dragon_stl_preview/v6/**"
+      - ".github/workflows/dragon-v6-cad-qa.yml"
+  workflow_dispatch:
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CAD and mesh QA dependencies
+        run: python -m pip install --upgrade pip build123d trimesh
+      - name: Build STEP and STL files
+        working-directory: cad/dragon_stl_preview/v6
+        run: python dragon_v6_build.py
+      - name: Check exported STL topology
+        working-directory: cad/dragon_stl_preview/v6
+        run: python check_stl_meshes.py out_v6

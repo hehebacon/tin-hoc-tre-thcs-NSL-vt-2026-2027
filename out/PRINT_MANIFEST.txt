@@ -1,49 +1,12 @@
-XZORT RESCUE DRAGON-LIZARD — 35cm / 12 DOF
-==============================================================================
-
-GENERATED CAD
-  Physical output: grouped STL modules
-  Reference output: one full-assembly STEP
-  No per-scale STL/STEP explosion
-
-SIZE LOCK
-  Hard maximum: 350.0 mm
-  Safety target: 345.0 mm
-  Uniform scale factor: 0.31182513
-
-ASSEMBLY BOUNDING BOX
-  Before scale: X=1106.39 Y=309.00 Z=426.79 mm
-  After scale : X=345.00 Y=96.35 Z=133.08 mm
-  Maximum after scale: 345.00 mm
-
-DESIGN LOCKS
-  Dragon-lizard visual shell over a quadruped mechanism
-  4 legs x 3 DOF = 12 servo positions
-  Round external joint shields
-  Layered dragon scales grouped into body/head/tail modules
-  Dragon head with integrated camera-eye housings
-  Electronics bay + removable tray
-  Top display mount
-  Articulated tapered tail
-  NO WINGS / NO CANARDS / NO FIN-WINGS
-
-PRINT MODULES
-  PRINT/body.stl
-  PRINT/head.stl
-  PRINT/electronics.stl
-  PRINT/FL_leg.stl
-  PRINT/FR_leg.stl
-  PRINT/RL_leg.stl
-  PRINT/RR_leg.stl
-  PRINT/tail.stl
-
-REFERENCE
-  REF/full_assembly.step
-
-RAW LOGICAL PART COUNT
-  166 generated solids/components
-  8 printable STL groups
-
-IMPORTANT
-  Verify real servo, battery, PCB, camera and display dimensions
-  before manufacturing.
+XZORT RESCUE DRAGON QUADRUPED v2
+Reference style: dragon-1.png — curled plated body, sculpted horned head, no wings, curved segmented tail with rounded tip
+Mechanical layout: four legs / 12 servo housings
+No global scaling. DS3225 envelope remains 41 x 21 x 41 mm.
+Parametric body: 158.0 x 104.0 x 59.0 mm; cavity 136.0 x 76.0 mm.
+Body dimensions derive from electronics tray clearance and leg-servo mounting envelope.
+Link centerline targets: coxa 45 mm, femur 75 mm, tibia 105 mm (matches AI_CONTEXT.md / firmware IK).
+Service hatch: 4 x M3 clearance holes aligned to internal pilot bosses; electronics and battery remain inside the torso.
+Bounding box: X=321.73, Y=250.36, Z=273.60 mm
+Hard envelope limit: 350.0 mm
+NOTE: STEP/STL are design prototypes. Validate servo horn geometry, fasteners, wire routing, clearances and physical gait before printing the full set.
+Printable groups: body, head, electronics, tail, FL_leg, FR_leg, RL_leg, RR_leg
