@@ -135,9 +135,9 @@ def make_wing(side):
 
 def make_tail():
     parts = []
-    lengths = [18, 16, 14, 12, 10, 9, 8, 7, 6]
-    radii = [15, 13, 11, 9.5, 8, 6.8, 5.8, 4.8, 3.8]
-    x = 82
+    lengths = [13, 11, 9, 8, 7, 6, 5, 4, 3]
+    radii = [13, 11, 9.5, 8, 6.8, 5.8, 4.8, 3.8, 2.8]
+    x = 65
     z = -1
     for i, (length, radius) in enumerate(zip(lengths, radii)):
         seg = Cylinder(radius, length, rotation=(0,90,0),
