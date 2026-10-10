@@ -20,7 +20,7 @@ from pathlib import Path
 import math
 
 OUT = Path("out_v6"); OUT.mkdir(exist_ok=True)
-BODY_L, BODY_W, BODY_H = 180.0, 90.0, 60.0
+BODY_L, BODY_W, BODY_H = 180.0, 84.0, 60.0
 WALL = 3.0
 BATTERY_CAVITY = (112.0, 42.0, 28.0)
 M3 = 3.2
@@ -45,24 +45,28 @@ def upper_body():
     # Raised central dragon-back spine / armor keel
     part += Pos(-5,0,31) * Box(116,34,5)
     # Layered scale panels along both flanks; intentionally large printable plates.
-    for x in (-58,-28,2,32,58):
+    for x in (-58,-29,0,29,58):
         for side in (-1,1):
-            plate = Pos(x, side*34, 27) * Rot(Z=side*5) * Box(25,15,5)
+            plate = Pos(x, side*31, 27) * Rot(Z=side*5) * Box(24,12,4)
             part += plate
     # Top access-cover screw bosses, four M3 pilot/clearance holes
     for x in (-76,76):
-        for y in (-33,33):
+        for y in (-30,30):
             boss = Pos(x,y,25) * Cylinder(5.8,8)
             hole = Pos(x,y,25) * Cylinder(M3/2,10)
             part += boss
             part -= hole
     # Neck/head mount at front (+X) and tail mount at rear (-X), through-bolt pattern.
     for x in (-84,84):
-        for y in (-16,16):
+        for y in (-15,15):
             part -= Pos(x,y,15) * Cylinder(M3/2,34)
-    # Dorsal spine mounting pads
-    for x in (-45,-15,15,45):
-        part += Pos(x,0,34) * Box(12,18,4)
+    # Integrated dragon dorsal spikes: center row plus swept side rows.
+    # These are part of the upper-body CAD solid, not separate loose spikes.
+    for i, x in enumerate(range(-54, 55, 18)):
+        h = 16 if i % 2 == 0 else 12
+        part += Pos(x, 0, 30 + h/2 - 1) * Rot(Y=-18) * Cone(5.2, 1.1, h)
+        for side in (-1, 1):
+            part += Pos(x-2, side*13, 29) * Rot(X=side*22, Y=-24) * Cone(3.8, 1.0, 11)
     return part
 
 def lower_body():
