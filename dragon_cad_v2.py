@@ -16,7 +16,7 @@ MAX_MM = 350.0
 SERVO_X, SERVO_Y, SERVO_Z = 41.0, 21.0, 41.0  # DS3225 envelope + small CAD allowance
 
 # Parametric belly: edit component targets and the body/cavity recalculate.
-TRAY_X, TRAY_Y, TRAY_Z = 122.0, 62.0, 4.0
+TRAY_X, TRAY_Y, TRAY_Z = 126.0, 66.0, 4.0
 ELECTRONICS_CLEARANCE = 5.0
 BODY_WALL = 4.0
 BODY_FLOOR = 5.0
@@ -26,9 +26,9 @@ PANEL_THICK = 4.0
 
 CAVITY_X = TRAY_X + 2 * ELECTRONICS_CLEARANCE
 CAVITY_Y = TRAY_Y + 2 * ELECTRONICS_CLEARANCE
-BODY_X = max(CAVITY_X + 2 * BODY_WALL, 2 * (LEG_MOUNT_X + SERVO_X / 2 + 3.0))
-BODY_Y = max(CAVITY_Y + 2 * BODY_WALL, 2 * (LEG_MOUNT_Y + SERVO_Y / 2 + 3.0))
-BODY_Z = BODY_FLOOR + BODY_ROOF + 35.0
+BODY_X = max(CAVITY_X + 2 * BODY_WALL, 2 * (LEG_MOUNT_X + SERVO_X / 2 + 3.0), 158.0)
+BODY_Y = max(CAVITY_Y + 2 * BODY_WALL, 2 * (LEG_MOUNT_Y + SERVO_Y / 2 + 3.0), 104.0)
+BODY_Z = BODY_FLOOR + BODY_ROOF + 42.0
 CAVITY_Z = BODY_Z - BODY_ROOF + 1.0
 PANEL_X, PANEL_Y = CAVITY_X + 12.0, CAVITY_Y + 12.0
 
@@ -111,14 +111,20 @@ def make_body():
     # Central ridge plates taper toward the neck and tail, like articulated dragon scutes.
     for i, x in enumerate(range(int(-BODY_X * .34), int(BODY_X * .35), 12)):
         t = abs(x) / max(BODY_X * .35, 1)
-        w = 20 - 7*t
-        h = 15 - 5*t
+        w = 22 - 7*t
+        h = 17 - 5*t
         plate = scale_plate(w, h, 4.0).rotate(Axis.X, 90)
         armor.append(plate.translate((x, 0, BODY_Z/2 + 4.0)))
         if i % 2 == 0:
-            ridge = Cone(6.2 - 1.5*t, 0.8, 12 - 2*t,
+            ridge = Cone(7.0 - 1.5*t, 0.8, 14 - 2*t,
                          align=(Align.CENTER, Align.CENTER, Align.MIN))
-            armor.append(ridge.rotate(Axis.Y, 90).translate((x, 0, BODY_Z/2 + 7)))
+            armor.append(ridge.rotate(Axis.Y, 90).translate((x, 0, BODY_Z/2 + 8)))
+        # Short paired side spines break up the smooth box silhouette without covering the hatch.
+        for side in (-1, 1):
+            if i % 2 == 0:
+                side_spine = Cone(4.8 - 1.0*t, 0.7, 9.0 - 1.0*t,
+                                  align=(Align.CENTER, Align.CENTER, Align.MIN))
+                armor.append(side_spine.rotate(Axis.X, side*24).translate((x, side*BODY_Y*0.34, BODY_Z*0.36)))
 
     # Layered flank scales overlap in staggered rows and follow the curved shoulder line.
     for side in (-1, 1):
@@ -131,8 +137,11 @@ def make_body():
                 plate = plate.rotate(Axis.Z, (j % 2 - 0.5) * 8)
                 armor.append(plate.translate((x, side*(BODY_Y/2 - 1.2), z)))
         # Muscular, rounded shoulder caps merge visually into the leg roots.
-        armor.append(ball(17, 1.15, .95, .9).translate((-BODY_X*.30, side*(BODY_Y/2 - 1), -3)))
-        armor.append(ball(19, 1.18, .95, .86).translate((BODY_X*.30, side*(BODY_Y/2 - 1), -5)))
+        armor.append(ball(19, 1.18, .98, .94).translate((-BODY_X*.30, side*(BODY_Y/2 - 1), -3)))
+        armor.append(ball(21, 1.20, .98, .90).translate((BODY_X*.30, side*(BODY_Y/2 - 1), -5)))
+        # Raised pectoral plates add an armored transition from chest to front legs.
+        chest = scale_plate(24, 18, 4.2).rotate(Axis.X, 90)
+        armor.append(chest.translate((-BODY_X*0.34, side*(BODY_Y/2 + 1.0), BODY_Z*0.12)))
     return shell, panel, armor
 
 def make_head():
@@ -145,6 +154,9 @@ def make_head():
     jaw = rb(43, 38, 7, 3).translate((-143, 0, -5))
     parts += [brow, lower_muzzle]
     parts += [skull, muzzle, jaw]
+    # Angular chin and layered cheek armor make the muzzle read more clearly as a dragon head.
+    chin = ball(17, 1.20, 0.92, 0.42).translate((-151, 0, -6))
+    parts.append(chin)
     # Eye sockets and raised eye housings (camera windows are 16 mm openings).
     for side in (-1, 1):
         socket = ball(10, 1.0, 0.82, 0.82).translate((-119, side*25, 36))
@@ -157,9 +169,12 @@ def make_head():
         rear_horn = rear_horn.rotate(Axis.Y, 24).rotate(Axis.X, side*10).translate((-89, side*25, 48))
         parts.append(rear_horn)
         parts.append(horn)
-        # Cheek scales
-        for i in range(3):
-            parts.append(scale_plate(20-i*3, 13-i*2, 3).rotate(Axis.X, 90).translate((-128+i*8, side*(30+i), 18+i*7)))
+        # Cheek scales, stepped rearward so they read as armor rather than flat decoration.
+        for i in range(4):
+            cheek = scale_plate(20-i*2.5, 14-i*1.8, 3.6).rotate(Axis.X, 90)
+            parts.append(cheek.translate((-132+i*7, side*(29+i*1.8), 14+i*6)))
+        brow_ridge = beam_between((-132, side*24, 43), (-111, side*25, 45), 5.0, 5.0, 1.8)
+        parts.append(brow_ridge)
     # Nose bridge and nostril rims
     parts.append(rb(18, 35, 13, 5).translate((-164, 0, 17)))
     for side in (-1, 1):
@@ -195,7 +210,7 @@ def make_wing(side):
     for yy, zz in tips:
         ribs.append(beam_between((-12, side*39, 25), (-12, yy, zz), 4.2, 3.6, 1.4))
     # Small raised web ribs make the membrane read as a wing rather than a plate.
-    for yy, zz in [(side*62, 18), (side*83, 17), (side*99, 22)]:
+    for yy, zz in [(side*59, 18), (side*77, 15), (side*94, 20), (side*108, 28)]:
         ribs.append(beam_between((-11, side*43, 22), (-11, yy, zz), 2.8, 2.6, 1.0))
     return Compound([membrane, shoulder] + ribs)
 
