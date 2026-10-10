@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feat/dragon-shell-35cm
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
