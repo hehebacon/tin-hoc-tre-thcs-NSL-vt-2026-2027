@@ -1,9 +1,12 @@
 XZORT RESCUE DRAGON QUADRUPED v2
-Reference style: dragon-1.png — sculpted head, swept double horns, broad bat wings, layered scales, segmented tail
+Reference style: dragon-1.png — curled plated body, sculpted horned head, swept scalloped wings and curved segmented tail
 Mechanical layout: four legs / 12 servo housings
 No global scaling. DS3225 envelope remains 41 x 21 x 41 mm.
-Link centerline targets: coxa 40 mm, femur 75 mm, tibia 85 mm.
-Bounding box: X=336.97, Y=266.00, Z=255.60 mm
+Parametric body: 147.0 x 95.0 x 52.0 mm; cavity 118.0 x 62.0 mm.
+Body dimensions derive from electronics tray clearance and leg-servo mounting envelope.
+Link centerline targets: coxa 45 mm, femur 75 mm, tibia 105 mm (matches AI_CONTEXT.md / firmware IK).
+Service hatch: 4 x M3 clearance holes aligned to internal pilot bosses; electronics and battery remain inside the torso.
+Bounding box: X=350.07, Y=250.36, Z=262.85 mm
 Hard envelope limit: 350.0 mm
 NOTE: STEP/STL are design prototypes. Validate servo horn geometry, fasteners, wire routing, clearances and physical gait before printing the full set.
 Printable groups: body, head, electronics, wings, tail, FL_leg, FR_leg, RL_leg, RR_leg
