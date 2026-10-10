@@ -103,29 +103,36 @@ def make_body():
                 align=(Align.CENTER, Align.CENTER, Align.CENTER)).translate((x, y, panel_z)))
 
     armor = []
-    # Raised spine: overlapping scales follow the back instead of looking like a flat strip.
-    for i, x in enumerate(range(int(-BODY_X * .34), int(BODY_X * .35), 13)):
+    # Sculpted dorsal cuirass: overlapping convex plates soften the rectangular
+    # electronics chassis while leaving the underside hatch and cavity untouched.
+    dorsal = ball(1, BODY_X * 0.51, BODY_Y * 0.53, BODY_Z * 0.30)
+    dorsal = dorsal.translate((0, 0, BODY_Z * 0.30))
+    armor.append(dorsal)
+    # Central ridge plates taper toward the neck and tail, like articulated dragon scutes.
+    for i, x in enumerate(range(int(-BODY_X * .34), int(BODY_X * .35), 12)):
         t = abs(x) / max(BODY_X * .35, 1)
-        plate = scale_plate(21 - 4*t, 17 - 3*t, 3.2)
-        armor.append(plate.rotate(Axis.X, 90).translate((x, 0, BODY_Z/2 - 1)))
+        w = 20 - 7*t
+        h = 15 - 5*t
+        plate = scale_plate(w, h, 4.0).rotate(Axis.X, 90)
+        armor.append(plate.translate((x, 0, BODY_Z/2 + 4.0)))
         if i % 2 == 0:
-            spine = Cone(5.5, 1.0, 13, align=(Align.CENTER, Align.CENTER, Align.MIN))
-            armor.append(spine.rotate(Axis.Y, 90).translate((x, 0, BODY_Z/2 + 5)))
+            ridge = Cone(6.2 - 1.5*t, 0.8, 12 - 2*t,
+                         align=(Align.CENTER, Align.CENTER, Align.MIN))
+            armor.append(ridge.rotate(Axis.Y, 90).translate((x, 0, BODY_Z/2 + 7)))
 
-    # Side armor overlaps like scales and wraps down over the torso flanks.
+    # Layered flank scales overlap in staggered rows and follow the curved shoulder line.
     for side in (-1, 1):
         for row in range(3):
-            z = BODY_Z * .20 - row * 12
-            for x in range(int(-BODY_X*.31), int(BODY_X*.32), 16):
-                width = 19 if row != 1 else 16
-                plate = scale_plate(width, 13, 3.4).rotate(Axis.X, 90)
-                armor.append(plate.translate((x, side*(BODY_Y/2 - 2), z)))
-        # Rounded shoulder armor visually blends the torso into each leg root.
-        armor.append(ball(17, 1.1, .9, .85).translate((-BODY_X*.30, side*(BODY_Y/2 - 1), -3)))
-        armor.append(ball(19, 1.15, .9, .8).translate((BODY_X*.30, side*(BODY_Y/2 - 1), -5)))
-
-    # A raised central dorsal plate hides the flat structural core from normal view.
-    armor.append(ball(1, 1, 1, 1).translate((0, 0, BODY_Z/2)))
+            z = BODY_Z * .23 - row * 10.5
+            for j, x in enumerate(range(int(-BODY_X*.31), int(BODY_X*.32), 14)):
+                width = 18 if row != 1 else 15
+                height = 12 if row != 2 else 10
+                plate = scale_plate(width, height, 3.8).rotate(Axis.X, 90)
+                plate = plate.rotate(Axis.Z, (j % 2 - 0.5) * 8)
+                armor.append(plate.translate((x, side*(BODY_Y/2 - 1.2), z)))
+        # Muscular, rounded shoulder caps merge visually into the leg roots.
+        armor.append(ball(17, 1.15, .95, .9).translate((-BODY_X*.30, side*(BODY_Y/2 - 1), -3)))
+        armor.append(ball(19, 1.18, .95, .86).translate((BODY_X*.30, side*(BODY_Y/2 - 1), -5)))
     return shell, panel, armor
 
 def make_head():
@@ -170,18 +177,26 @@ def make_neck():
     return parts
 
 def make_wing(side):
-    """Swept, scalloped wing: a shaped membrane with raised ribs, not a flat rectangle."""
-    pts = [
-        (0, side*30, 22), (0, side*51, 31), (0, side*79, 72),
-        (0, side*76, 48), (0, side*100, 60), (0, side*91, 35),
-        (0, side*116, 37), (0, side*91, 17), (0, side*69, 9),
-        (0, side*48, 10), (0, side*30, 22)
+    """Three-dimensional swept dragon wing with a thick leading spar and raised ribs."""
+    root = (-14, side*35, 22)
+    tips = [(side*52, 34), (side*79, 72), (side*101, 60), (side*116, 37)]
+    # Curved-looking scalloped membrane is deliberately thicker near the root.
+    outline = [
+        (0, side*29, 19), (0, side*42, 27), (0, side*57, 43),
+        (0, side*79, 72), (0, side*75, 48), (0, side*101, 60),
+        (0, side*91, 36), (0, side*116, 37), (0, side*98, 20),
+        (0, side*77, 10), (0, side*53, 8), (0, side*29, 19)
     ]
-    membrane = extrude(Face(Polyline(pts, close=True)), amount=4.2, dir=(1,0,0)).translate((-17,0,0))
-    shoulder = ball(15, 1.25, 1.0, .85).translate((-13, side*39, 25))
-    ribs = []
-    for end in [(0, side*51, 31), (0, side*79, 72), (0, side*100, 60), (0, side*116, 37)]:
-        ribs.append(beam_between((-12, side*38, 26), (-12, end[1], end[2]), 3.2, 3.0, 1.0))
+    membrane = extrude(Face(Polyline(outline, close=True)), amount=5.5, dir=(1,0,0)).translate((-18,0,0))
+    # Rounded, swept leading edge and muscular root give the wing visible depth.
+    spar = beam_between(root, (0, side*82, 68), 8.0, 7.0, 2.5)
+    shoulder = ball(16, 1.2, 1.0, .9).translate((-12, side*39, 25))
+    ribs = [spar]
+    for yy, zz in tips:
+        ribs.append(beam_between((-12, side*39, 25), (-12, yy, zz), 4.2, 3.6, 1.4))
+    # Small raised web ribs make the membrane read as a wing rather than a plate.
+    for yy, zz in [(side*62, 18), (side*83, 17), (side*99, 22)]:
+        ribs.append(beam_between((-11, side*43, 22), (-11, yy, zz), 2.8, 2.6, 1.0))
     return Compound([membrane, shoulder] + ribs)
 
 def make_tail():
