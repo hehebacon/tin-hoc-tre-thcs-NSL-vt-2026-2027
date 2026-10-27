@@ -54,11 +54,9 @@ RR: 9=Coxa, 10=Femur, 11=Tibia
 
 Current geometry:
 
-- Coxa: 45 mm
-- Femur: 75 mm
-- Tibia: 105 mm
-
-These values must remain consistent across firmware, simulator, calibration, and CAD unless a deliberate redesign is requested.
+- Firmware source of truth in `RobotConfig.h`: Coxa 35 mm, Femur 65 mm, Tibia 85 mm.
+- Older design notes referenced 45/75/105 mm; those are NOT the active firmware constants.
+- CAD must be explicitly reconciled with `RobotConfig.h` and measured servo mounts before printing. Do not assume the current CAD already matches either set.
 
 ## 5. Software architecture
 
@@ -270,7 +268,15 @@ When assisting this project:
 9. Do not claim firmware compilation/tests succeeded unless they were actually run.
 10. When making substantial source changes, provide complete replacement files when practical.
 
-## 16. Development workflow
+## 16. Budget and board selection
+
+- New-purchase ceiling: 1,000,000 VND. The old 5M BOM is superseded; follow `BUDGET_1000000.md`.
+- A complete reliable 12-servo quadruped is not guaranteed to fit this amount if all parts must be bought from zero.
+- Current firmware target is ESP32/Arduino. Huna Robo compatibility is unverified until the exact board and SDK are known.
+- Do not add optional display, thermal, environment or online-AI hardware to the first competition build unless the task/rules prove it is needed.
+- Prefer borrowed/available school hardware and test one complete 3-DOF leg before expanding to all four.
+
+## 17. Development workflow
 
 For code changes:
 
