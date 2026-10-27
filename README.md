@@ -1,4 +1,8 @@
-# AI Quadruped Robot - Servo Controller
+# XZORT Rescue Quadruped — Bảng B
+
+**Current constraints:** new purchases capped at 1,000,000 VND; four-legged concept retained; hardware target not finalized until the exact controller board and servo models are confirmed. Read `BUDGET_1000000.md` before purchasing. The previous 5M BOM is superseded.
+
+**CAD status:** current generated assembly is not confirmed printable. The CAD generator refuses to globally scale mechanical features and may block until the oversized design is redesigned. Do not print the tracked STL files as final parts.
 
 Current firmware stage:
 
