@@ -24,9 +24,7 @@ import shutil
 # ============================================================
 
 OUT = Path("out")
-# Generated CAD workspace: always start clean so stale STL/STEP files cannot mix.
-if OUT.exists():
-    shutil.rmtree(OUT)
+# Preserve previous outputs until a new CAD design passes validation.
 OUT.mkdir(parents=True, exist_ok=True)
 
 COMPETITION_MAX_MM = 350.0
@@ -461,58 +459,30 @@ def max_dimension(shape):
 
 
 def scale_everything_to_competition(parts):
-    """Uniformly scale every module from one assembly-wide measurement."""
+    """Validate authored dimensions; never shrink mechanical interfaces."""
     assembly = fuse_all(parts)
-    before = shape_size(assembly)
+    bounds = assembly.bounding_box()
+    before = (
+        float(bounds.max.X - bounds.min.X),
+        float(bounds.max.Y - bounds.min.Y),
+        float(bounds.max.Z - bounds.min.Z),
+    )
     current_max = max(before)
 
-    if current_max <= TARGET_MAX_MM:
-        factor = 1.0
-    else:
-        factor = TARGET_MAX_MM / current_max
-
-    # Scale each printable module independently. Do NOT measure the Compound
-    # after scaling: in some build123d versions a Compound's bounding box can
-    # retain the source-location envelope even when its child solids are scaled.
-    # Scale about the assembly origin, not each shape's own location.
-    # Shape.scale(factor) defaults to scaling around the object location, which
-    # shrinks each part but leaves the modules spread across the original
-    # 823 mm assembly envelope. Scaling about (0, 0, 0) transforms both the
-    # geometry and its assembly position by the same uniform factor.
-    scaled = [(name, scale(shape, by=factor, about=(0, 0, 0))) for name, shape in parts]
-
-    # Compute the post-scale envelope directly from the transformed modules.
-    # This is both fast and robust because the same scaled shapes are exported.
-    mins = [float("inf"), float("inf"), float("inf")]
-    maxs = [float("-inf"), float("-inf"), float("-inf")]
-    for name, shape in scaled:
-        bb = shape.bounding_box()
-        mins[0] = min(mins[0], float(bb.min.X))
-        mins[1] = min(mins[1], float(bb.min.Y))
-        mins[2] = min(mins[2], float(bb.min.Z))
-        maxs[0] = max(maxs[0], float(bb.max.X))
-        maxs[1] = max(maxs[1], float(bb.max.Y))
-        maxs[2] = max(maxs[2], float(bb.max.Z))
-
-    after = (
-        maxs[0] - mins[0],
-        maxs[1] - mins[1],
-        maxs[2] - mins[2],
-    )
-
-    # The expected envelope is also bounded mathematically by the same
-    # uniform factor, providing a second cheap sanity check.
-    expected_max = current_max * factor
-    if max(after) > COMPETITION_MAX_MM + 0.01:
-        # Some geometry APIs report an unscaled compound envelope. If the
-        # individual module bounds are also genuinely too large, fail safely.
+    # Global scaling used to shrink servo housings, bores, holes, clearances,
+    # leg links and the 45/75/105 mm IK geometry. Such files are not printable
+    # with the real hardware. Fail closed until the assembly is redesigned.
+    if current_max > TARGET_MAX_MM:
         raise RuntimeError(
-            f"Competition size guard failed after module scaling: "
-            f"{max(after):.2f} mm > {COMPETITION_MAX_MM:.2f} mm "
-            f"(expected <= {expected_max:.2f} mm)"
+            "CAD DESIGN BLOCKED: authored assembly is "
+            f"X={before[0]:.2f}, Y={before[1]:.2f}, Z={before[2]:.2f} mm "
+            f"(max {current_max:.2f} mm); target is <= {TARGET_MAX_MM:.2f} mm. "
+            "Uniform scaling is disabled because it breaks real servo fit, "
+            "mounting holes, clearances and the 45/75/105 mm IK geometry. "
+            "Redesign the body, head, tail and leg placement at full mechanical "
+            "scale before generating print-ready STL files."
         )
-
-    return scaled, factor, before, after
+    return parts, 1.0, before, before
 
 
 def grouped_exports(parts):
@@ -569,7 +539,7 @@ def write_manifest(parts, factor, before, after, groups):
         "SIZE LOCK",
         f"  Hard maximum: {COMPETITION_MAX_MM:.1f} mm",
         f"  Safety target: {TARGET_MAX_MM:.1f} mm",
-        f"  Uniform scale factor: {factor:.8f}", "",
+        f"  Geometry scale factor: {factor:.8f} (must remain 1.0)", "",
         "ASSEMBLY BOUNDING BOX",
         f"  Before scale: X={before[0]:.2f} Y={before[1]:.2f} Z={before[2]:.2f} mm",
         f"  After scale : X={after[0]:.2f} Y={after[1]:.2f} Z={after[2]:.2f} mm",
@@ -593,6 +563,8 @@ def write_manifest(parts, factor, before, after, groups):
         "RAW LOGICAL PART COUNT", f"  {len(parts)} generated solids/components",
         f"  {len(groups)} printable STL groups", "",
         "IMPORTANT",
+        "  Geometry is never automatically scaled.",
+        "  Build fails closed if the authored assembly exceeds the size target.",
         "  Verify real servo, battery, PCB, camera and display dimensions",
         "  before manufacturing.",
     ]
