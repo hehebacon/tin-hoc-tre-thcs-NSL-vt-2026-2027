@@ -32,6 +32,15 @@ IMPORTANT: never use the ESP32 as the power source for 12 physical servos. Selec
 
 ## 2. Hardware purchase checklist
 
+### Budget and controller gate — read first
+
+- Current new-purchase ceiling: 1,000,000 VND; follow `BUDGET_1000000.md`.
+- Inventory parts already owned or available from school before buying.
+- Confirm exact controller model and competition rules. This firmware currently targets ESP32/Arduino; Huna Robo support is not verified.
+- Do not buy all 12 servos before a complete 3-DOF leg has passed mechanical, power and motion tests.
+- Do not remove fuse, physical power cutoff, common-ground planning or separate servo power to save money.
+
+
 ### Controller
 
 - [ ] ESP32 development board x1
