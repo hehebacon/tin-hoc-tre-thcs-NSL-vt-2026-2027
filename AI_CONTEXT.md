@@ -16,6 +16,10 @@ PERCEIVE → UNDERSTAND → MOVE → SEARCH → DETECT → RESPOND → RESCUE
 
 ## 2. Robot
 
+**Current purchasing constraint:** new-purchase hard cap 1,000,000 VND. See `BUDGET_1000000.md`; the previous 5M BOM is superseded. Do not assume all 12 servos or a complete robot can be bought within this amount. Inventory existing/school-owned hardware before recommending purchases.
+
+**Controller compatibility gate:** the current firmware targets ESP32/Arduino and uses ESP32-specific APIs. A board supporting C/C++ is not automatically source-compatible. Confirm the exact Huna Robo model, toolchain/SDK, PWM/I2C support, and contest rules on external controllers before choosing the target or porting code. Do not claim Huna Robo compatibility until compiled against its actual SDK.
+
 Physical architecture:
 
 - 4 legs
