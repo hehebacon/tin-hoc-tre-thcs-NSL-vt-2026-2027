@@ -88,7 +88,7 @@ def verify_output() -> None:
 
 def main() -> int:
     log(f"Root: {ROOT}")
-    clean_output()
+    # The generator validates geometry before replacing any previous artifacts.
     run_generator()
     verify_output()
     log("BUILD PASS")
