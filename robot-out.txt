@@ -1,266 +1,35 @@
-===============================================================
-              XZORT RESCUE QUADRUPED — 80cm
-                    CONCEPT / FRONT VIEW
-===============================================================
+XZORT RESCUE QUADRUPED — CURRENT BUILD STATUS
+================================================
 
-                         ┌───────────────┐
-                         │   THERMAL     │
-                         │      ●        │
-                         │    CAMERA     │
-                         │      ●        │
-                         └───────┬───────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │                         │
-                    │       TOP DISPLAY       │
-                    │      ┌────────────┐      │
-                    │      │ RESCUE OS  │      │
-                    │      │ SEARCH     │      │
-                    │      │ BAT 82%    │      │
-                    │      └────────────┘      │
-                    │                         │
-                    │      ROBOT BODY         │
-                    │   ┌─────────────────┐   │
-                    │   │ ESP32 / POWER   │   │
-                    │   │ PCA9685 / IMU   │   │
-                    │   └─────────────────┘   │
-                    └─────────────────────────┘
-                       ╱                 ╲
-                      ╱                   ╲
-                 ┌───●                     ●───┐
-                 │ FL                      FR │
-                 │                           │
-                 │                           │
-              ┌──●──┐                     ┌──●──┐
-              │ S1  │                     │ S4  │
-              └──┬──┘                     └──┬──┘
-                 │                            │
-                 │ FEMUR                      │ FEMUR
-                 │                            │
-              ┌──●──┐                     ┌──●──┐
-              │ S2  │                     │ S5  │
-              └──┬──┘                     └──┬──┘
-                 ╲                            ╱
-                  ╲                          ╱
-                   ╲                        ╱
-                  ┌─●─┐                  ┌─●─┐
-                  │S3 │                  │S6 │
-                  └─┬─┘                  └─┬─┘
-                    │                       │
-                   FOOT                    FOOT
+Concept: four-legged dragon/lizard-style robot; target 12 logical servo channels.
+Current firmware baseline: ESP32/Arduino C++ + PCA9685 driver abstraction.
+IMPORTANT: Huna Robo compatibility is not verified. A board supporting C/C++ is not automatically compatible with ESP32-specific APIs. Confirm exact board model, SDK/toolchain and competition rules before porting or purchasing.
 
+CURRENT CONSTRAINTS
+- New-purchase ceiling: 1,000,000 VND; read BUDGET_1000000.md.
+- The old 5,000,000 VND BOM is superseded.
+- No display, thermal camera, environment sensors or online AI hardware in the minimum build unless required by the actual task.
+- Existing/borrowed school hardware must be inventoried before purchasing.
+- Do not claim a complete reliable 12-servo robot can be bought from zero within 1M VND.
+- The exact competition arena size limit must be confirmed from official rules; 350 mm is only a project target, not yet verified as an official rule.
 
-                     REAR LEGS
-                       RL       RR
-                       │         │
-                    ┌──●──┐   ┌──●──┐
-                    │     │   │     │
-                    │     │   │     │
-                    └──┬──┘   └──┬──┘
-                       │           │
-                       ●           ●
-                       │           │
-                      FOOT        FOOT
+FIRMWARE GEOMETRY SOURCE OF TRUTH
+- Coxa 35 mm
+- Femur 65 mm
+- Tibia 85 mm
+Defined in RobotConfig.h. Legacy documents with 45/75/105 mm or 800 mm overall dimensions are not the current mechanical specification.
 
+CAD STATUS
+- Global scaling is disabled because it invalidates servo housings, holes, clearances and linkage lengths.
+- Current CAD design is expected to be blocked while oversized; this is intentional until the geometry is redesigned at full scale.
+- Tracked STL/STEP files are legacy artifacts and are NOT approved for printing.
 
-===============================================================
-                         TOP VIEW
-===============================================================
-
-                         FRONT
-                           ↑
-                    ┌─────────────┐
-                    │   THERMAL   │
-                    │    CAMERA   │
-                    └──────┬──────┘
-                           │
-             FL            │             FR
-          ╲                │                ╱
-           ╲      ┌───────────────┐        ╱
-            ●─────│               │───────●
-            │     │    DISPLAY    │       │
-            │     │               │       │
-            │     │   MAIN BODY   │       │
-            ●─────│               │───────●
-           ╱      └───────────────┘        ╲
-          ╱                                  ╲
-        RL                                    RR
-        ●                                      ●
-        │                                      │
-        │                                      │
-        ●                                      ●
-
-                           ↓
-                         REAR
-
-Overall robot length: ~80 cm
-Overall width: ~55–65 cm
-Body: compact, low center of gravity
-Legs: 4 × 3 DOF
-Total servos: 12
-===============================================================
-
-
-===============================================================
-                    SINGLE LEG — SIDE VIEW
-===============================================================
-
-                         BODY
-              ───────────────────────
-                       │
-                       │
-                    [COXA]
-                     SERVO
-                       ●
-                       │
-                       │  FEMUR
-                       │
-                       └───────────────●
-                                       \
-                                        \
-                                         \ TIBIA
-                                          \
-                                           \
-                                            ●
-                                           FOOT
-
-
-               STABLE POSTURE
-
-                    BODY
-              ─────────────────
-                       ●
-                       │
-                       │
-                       ●
-                        \
-                         \
-                          ●
-                         FOOT
-
-
-               WALK POSTURE
-
-                    BODY
-              ─────────────────
-                       ●
-                       │
-                       │
-                       └──────────●
-                                   \
-                                    \
-                                     ●
-                                    FOOT
-
-          Knee/femur-tibia geometry opens wider
-          during walking for a longer stride.
-
-
-===============================================================
-                    3 DOF PER LEG
-===============================================================
-
-              BODY
-                │
-                ▼
-          ┌──────────┐
-          │ COXA     │  ← horizontal rotation
-          └────┬─────┘
-               │
-               ▼
-          ┌──────────┐
-          │ FEMUR    │  ← vertical/outward movement
-          └────┬─────┘
-               │
-               ▼
-          ┌──────────┐
-          │ TIBIA    │  ← knee/foot extension
-          └────┬─────┘
-               │
-               ▼
-             FOOT
-
-
-===============================================================
-                    FRONT SENSOR MODULE
-===============================================================
-
-                 ┌─────────────────┐
-                 │   THERMAL ●     │
-                 │                 │
-                 │    CAMERA ●     │
-                 │                 │
-                 │ ●             ● │
-                 │  DISTANCE       │
-                 └─────────────────┘
-
-       LED ──●                       ●── LED
-
-
-===============================================================
-                    MAIN COMPONENTS
-===============================================================
-
-BODY
- ├── ESP32
- ├── PCA9685
- ├── 3.5" Touch Display
- ├── Battery
- ├── Servo Power BEC
- ├── Logic Buck
- ├── IMU
- ├── BME280
- └── E-STOP
-
-FRONT
- ├── Camera
- ├── Thermal sensor/camera
- ├── Distance sensors
- └── LED
-
-LEGS
- ├── FL = Servo 0,1,2
- ├── FR = Servo 3,4,5
- ├── RL = Servo 6,7,8
- └── RR = Servo 9,10,11
-
-MECHANICAL
- ├── Metal servo horns
- ├── Steel shafts
- ├── Bearings
- ├── Aluminum load-bearing frame
- └── PETG/nylon 3D-printed outer shell
-
-
-===============================================================
-                       DESIGN LANGUAGE
-===============================================================
-
-Shape:
-    futuristic rescue robot / robotic dog / spider-like
-    compact body
-    four articulated legs
-    aggressive but friendly engineering appearance
-
-Colors:
-    BLACK       = main body
-    BLUE        = accents / status lighting
-    WHITE       = labels / small details
-
-Materials:
-    aluminum internal frame
-    PETG/nylon outer shell
-    metal joints / shafts / servo horns
-
-Important:
-    DO NOT make the legs look like simple V-shaped sticks.
-    Each leg has a real 3-joint quadruped structure:
-        COXA → FEMUR → TIBIA → FOOT
-
-    The body should be relatively low and compact.
-    The four legs extend from the four corners of the body.
-    Front sensor module sits at the front.
-    Touchscreen sits on the top of the body.
-    Robot should look like a serious search-and-rescue prototype,
-    not a toy.
-===============================================================
+SAFE BUILD ORDER
+1. Inventory exact board, servos, power, wiring and fabrication access.
+2. Confirm controller is permitted by competition rules.
+3. Test one servo and the PWM path with hardware outputs disabled by default.
+4. Build and test one complete 3-DOF leg.
+5. Reconcile CAD dimensions with the real servo and firmware geometry.
+6. Add the other legs only when budget and parts are confirmed.
+7. Prove stand, slow gait, turns and mission behavior in stages.
+8. Add only task-required sensors after the locomotion base is reliable.
