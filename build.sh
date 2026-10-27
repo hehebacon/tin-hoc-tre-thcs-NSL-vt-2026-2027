@@ -82,7 +82,7 @@ git status --short
 
 # Only source/build scripts are committed automatically.
 # Generated CAD in out/ remains local unless it was already tracked.
-git add module.py build.sh
+git add module.py modul.py build.sh
 
 if [[ -n "$(git diff --cached --name-only)" ]]; then
   git commit -m "chore(cad): update automated module build"
