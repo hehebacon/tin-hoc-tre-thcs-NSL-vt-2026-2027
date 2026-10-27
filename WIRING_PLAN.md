@@ -1,4 +1,6 @@
-# Robot V2 Wiring Plan
+# Robot Wiring Plan — hardware selection gate
+
+**Budget:** new purchases capped at 1,000,000 VND; see `BUDGET_1000000.md`. The controller target is not final until the exact board model and contest rules are confirmed. This wiring applies only to ESP32 DevKit + PCA9685, not automatically to Huna Robo.
 
 This is the planned wiring for an ESP32 DevKit-style controller. Pin labels vary by board, so verify the exact board pinout before connecting power.
 
@@ -35,6 +37,9 @@ I2C devices share SDA/SCL and must have non-conflicting addresses.
 Servo channel numbering is logical. The physical servo orientation must be calibrated before gait testing.
 
 ## Sensors
+
+For the first budget build, do not buy optional sensors until the locomotion base works and the task rules show they are needed. Existing/borrowed parts take priority.
+
 
 Recommended first hardware layer:
 
