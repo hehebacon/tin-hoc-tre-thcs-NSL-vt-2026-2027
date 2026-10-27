@@ -25,6 +25,12 @@ servo_controller/
 └── README.md
 ```
 
+## Hardware target and budget gate
+
+The current firmware is an ESP32/Arduino target, not a verified Huna Robo port. A C/C++-capable board is not automatically API-compatible. Confirm the exact board model, SDK/toolchain and competition rules before selecting or porting the target.
+
+New-purchase cap: 1,000,000 VND. The old 5M BOM is superseded; see `BUDGET_1000000.md`. This budget requires inventorying existing/borrowed parts and staged testing; it does not guarantee a complete 12-servo robot can be bought from zero.
+
 ## Arduino IDE
 
 Open:
