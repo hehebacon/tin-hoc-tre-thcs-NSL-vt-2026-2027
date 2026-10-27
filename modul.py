@@ -470,7 +470,7 @@ def scale_everything_to_competition(parts):
     current_max = max(before)
 
     # Global scaling used to shrink servo housings, bores, holes, clearances,
-    # leg links and the 45/75/105 mm IK geometry. Such files are not printable
+    # leg links and the 35/65/85 mm firmware geometry. Such files are not printable
     # with the real hardware. Fail closed until the assembly is redesigned.
     if current_max > TARGET_MAX_MM:
         raise RuntimeError(
@@ -478,7 +478,7 @@ def scale_everything_to_competition(parts):
             f"X={before[0]:.2f}, Y={before[1]:.2f}, Z={before[2]:.2f} mm "
             f"(max {current_max:.2f} mm); target is <= {TARGET_MAX_MM:.2f} mm. "
             "Uniform scaling is disabled because it breaks real servo fit, "
-            "mounting holes, clearances and the 45/75/105 mm IK geometry. "
+            "mounting holes, clearances and the 35/65/85 mm firmware geometry. "
             "Redesign the body, head, tail and leg placement at full mechanical "
             "scale before generating print-ready STL files."
         )
