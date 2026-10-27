@@ -8,6 +8,10 @@ DESIGN
 - Dragon head with drilled eye openings
 - Tapered leg links with structural ribs
 
+STATUS NOTE
+- Do not print the currently generated STL set yet. The previous global scaling approach damaged real mechanical interface dimensions; the generator now blocks oversized authored geometry instead of silently scaling it.
+- The assembly must be redesigned and checked against the exact selected servo and controller dimensions before manufacturing.
+
 MODEL
 Nominal robot height: 800.0 mm
 Body: 145.0 x 250.0 x 72.0 mm
