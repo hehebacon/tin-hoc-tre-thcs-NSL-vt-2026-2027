@@ -1,38 +1,26 @@
-RESCUE QUADRUPED — FDM PRINT V4 / DRAGON BODY
-==============================================================
+RESCUE QUADRUPED — PRINT SPEC STATUS
+====================================
 
-DESIGN
-- Dragon-style central body with armored spine
-- Rear articulated tapering dragon tail
-- Separate tail modules for easier printing/replacement
-- Dragon head with drilled eye openings
-- Tapered leg links with structural ribs
+STATUS: HOLD — NOT APPROVED FOR PRINTING
 
-STATUS NOTE
-- Do not print the currently generated STL set yet. The previous global scaling approach damaged real mechanical interface dimensions; the generator now blocks oversized authored geometry instead of silently scaling it.
-- The assembly must be redesigned and checked against the exact selected servo and controller dimensions before manufacturing.
+The old 800 mm / long-leg specification below belongs to a superseded concept and must not be used as the competition build specification.
 
-MODEL
-Nominal robot height: 800.0 mm
-Body: 145.0 x 250.0 x 72.0 mm
-Thigh: 180.0 mm
-Shin: 200.0 mm
-Tail modules: 6 + tip
-Eye hole diameter: 8.0 mm
+Current project constraints:
+- Four-legged quadruped, intended 12 logical joints if compatible actuators are available.
+- New-purchase budget cap: 1,000,000 VND; see BUDGET_1000000.md.
+- Exact controller board and exact servo model are not yet confirmed.
+- Active firmware geometry in RobotConfig.h is coxa 35 mm, femur 65 mm, tibia 85 mm. CAD has not yet been verified against this geometry.
+- CAD generator no longer globally scales the whole robot. If the authored assembly exceeds its target, the build must fail until the body/head/tail/leg placement is redesigned.
 
-PRINT FILES
-- Dragon body
-- Dragon head with eye holes
-- Dragon hip brackets
-- Dragon thigh links
-- Dragon knee/shin links
-- Tail modules 01-06
-- Tail tip
+Do not print the old tracked STL files as final mechanical parts. They are legacy outputs and may be scaled or incompatible with the real hardware.
 
-FDM STARTING PROFILE
-- Layer height: 0.20 mm
-- Walls: 4+
-- Infill: 30-50% for structural prototypes
-- PETG or another mechanically suitable material
-- Print one body/leg/tail test before full production
-- Verify real servo and fastener dimensions before final print
+Before print approval:
+1. Confirm the official arena size limit from the competition rules.
+2. Confirm controller/servo models and measure their mounting interfaces.
+3. Redesign the assembly to fit the real interfaces at full scale.
+4. Run CAD generation and verify each bounding box and mounting clearance.
+5. Print a single bracket / one leg test first.
+6. Test fit with the actual servo and fasteners.
+7. Only then print the complete frame.
+
+Appearance is secondary to fit, mass, repairability, safe wiring and stable locomotion.
