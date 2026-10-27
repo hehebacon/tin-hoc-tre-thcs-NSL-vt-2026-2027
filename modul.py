@@ -18,9 +18,9 @@ import shutil
 #   - electronics bay + top display mount
 #   - NO WINGS / NO CANARDS / NO FIN-WINGS
 #
-# All geometry is authored in millimetres.  The complete assembly is
-# generated first, measured, then every physical/reference component is
-# uniformly scaled by the SAME factor. This keeps the modules matched.
+# All geometry is authored in millimetres. Mechanical interfaces must remain
+# full-size. The generator validates the envelope and FAILS before replacing
+# existing exports if the assembly is too large; it never globally scales parts.
 # ============================================================
 
 OUT = Path("out")
@@ -584,7 +584,7 @@ def main():
     parts, factor, before, after = scale_everything_to_competition(parts)
 
     print(f"[INFO] Raw bounding box: X={before[0]:.2f} Y={before[1]:.2f} Z={before[2]:.2f} mm")
-    print(f"[INFO] Uniform scale factor: {factor:.8f}")
+    print(f"[INFO] Geometry scale factor (must stay 1.0): {factor:.8f}")
     print(f"[INFO] Final bounding box: X={after[0]:.2f} Y={after[1]:.2f} Z={after[2]:.2f} mm")
 
     groups = grouped_exports(parts)
@@ -593,6 +593,17 @@ def main():
     if missing:
         raise RuntimeError(f"Missing required printable groups: {sorted(missing)}")
     print(f"[INFO] Printable STL groups: {len(groups)}")
+
+    # Only remove stale generated exports after geometry and required groups
+    # have passed validation. If validation fails, keep the previous files.
+    for folder in (OUT / "PRINT", OUT / "REF"):
+        if folder.exists():
+            for old in folder.iterdir():
+                if old.is_file() and old.suffix.lower() in {".stl", ".step", ".stp"}:
+                    old.unlink()
+    manifest = OUT / "PRINT_MANIFEST.txt"
+    if manifest.exists():
+        manifest.unlink()
 
     for name, shape in groups.items():
         export_print_stl(name, shape)
@@ -610,7 +621,7 @@ def main():
     print(f"[DONE] Output: {OUT.resolve()}")
     print("[DONE] PRINT/*.stl = grouped physical modules")
     print("[DONE] REF/full_assembly.step = reference CAD")
-    print("[DONE] 35cm hard size guard: PASS")
+    print("[DONE] Full-scale geometry envelope guard: PASS")
 
 
 
