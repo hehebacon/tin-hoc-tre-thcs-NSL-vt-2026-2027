@@ -24,7 +24,7 @@ Simulator:
     mission/path
         -> GaitPlanner
         -> FootTarget
-        -> QuadrupedIK (45/75/105 mm)
+        -> QuadrupedIK (35/65/85 mm)
         -> joint angles
 
 ESP32:
@@ -37,9 +37,23 @@ ESP32:
         -> ServoManager
         -> PCA9685
 
-The simulator is not a replacement for mechanical calibration. Before real
-servo power-up, verify every leg's direction, limits, neutral angle and physical
-clearance at low speed.
+## Geometry source of truth
+
+The active nominal geometry is defined by the firmware in
+`RobotConfig.h` and mirrored by `rescue_robot_demo/ik.py`:
+
+- Coxa: 35 mm
+- Femur: 65 mm
+- Tibia: 85 mm
+
+Older project notes used 45/75/105 mm. Those values are legacy and must not
+be used for current simulator/CAD integration unless the mechanical design
+and firmware are deliberately changed together.
+
+The simulator IK is a reachability/telemetry model. It does not replace
+mechanical calibration or prove that a physical pose is safe. Before real
+servo power-up, verify every leg's direction, limits, neutral angle and
+physical clearance with the actual servo brackets and links.
 
 ## Run
 
@@ -67,19 +81,6 @@ JSON command example:
 Never treat simulator reachability as proof that a physical pose is safe.
 Mechanical limits, power/current limits and calibration must be verified on the
 real robot.
-
-
-## Simulator validation status
-
-The simulator now exposes the same nominal leg geometry documented for the
-physical robot:
-
-- Coxa: 45 mm
-- Femur: 75 mm
-- Tibia: 105 mm
-
-The Python IK layer is used for reachability and telemetry only. The ESP32
-Kinematics module remains authoritative for physical servo output and limits.
 
 The UI shows each leg's gait phase plus C/F/T joint angles while the robot
 moves. This makes gait changes visible before hardware power-up.
